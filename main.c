@@ -41,7 +41,9 @@ int main(int argc, char *argv[])
 	
     int found = 0;
     size_t vert_offset = 0;
-    unsigned char bytes[6];
+	size_t index_offset = 0;
+    unsigned char vert_bytes[4];
+	unsigned char index_bytes[8];
 
 //=============================================================================
 // FILE SYSTEM
@@ -80,11 +82,11 @@ int main(int argc, char *argv[])
 
 	fprintf(stderr, "Processing\n", argv[0]);
 	
-    while (fread(bytes, 1, 4, f_in) == 4) { //Finding beginning of vertices by pattern
-        if (bytes[0] == 0x00 &&
-            bytes[1] > 0x00 &&
-            bytes[2] > 0x00 &&
-            bytes[3] > 0x00) {
+    while (fread(vert_bytes, 1, 4, f_in) == 4) { //Finding beginning of vertices by pattern
+        if (vert_bytes[0] == 0x00 &&
+            vert_bytes[1] > 0x00 &&
+            vert_bytes[2] > 0x00 &&
+            vert_bytes[3] > 0x00) {
             found = 1;
             vert_offset += 1;
             break;
@@ -93,7 +95,7 @@ int main(int argc, char *argv[])
         vert_offset++;
     }
 
-	fseek(f_in, 0x24, SEEK_SET); //Temp solution aka hacki the hack
+	fseek(f_in, 0x10, SEEK_SET); //Temp solution aka hacki the hack
 	fread(&vert_cnt, 1, sizeof(vert_cnt), f_in);
 	
 	//fseek(f_in, 0x2c, SEEK_SET); //Temp solution aka hacki the hack
@@ -116,11 +118,27 @@ int main(int argc, char *argv[])
 		fprintf(f_out, "vt %f %f\n", verts[i].tc[0], verts[i].tc[1]); 
 	}
 
-	fseek(f_in, 0x10, SEEK_SET); //Temp solution aka hacki the hack
+	fseek(f_in, 0x14, SEEK_SET); //Temp solution aka hacki the hack
 	fread(&index_cnt, 1, sizeof(index_cnt), f_in);
 	
-
-	fseek(f_in, 0x6368, SEEK_SET); //Temp solution aka hacki the hack
+    while (fread(index_bytes, 1, 8, f_in) == 8) { //Finding beginning of faces by pattern
+        if (index_bytes[0] == 0x00 &&
+            index_bytes[1] == 0x00 &&
+            index_bytes[2] == 0x01 &&
+			index_bytes[3] == 0x00 &&
+			index_bytes[4] == 0x02 &&
+			index_bytes[5] == 0x00 &&
+			index_bytes[6] == 0x02 &&
+            index_bytes[7] == 0x00) {
+            found = 1;
+            break;
+        }
+        fseek(f_in, -7, SEEK_CUR); //Back to the beginning
+        index_offset++;
+    }
+	
+	//fseek(f_in, 0x6368, SEEK_SET); //Temp solution aka hacki the hack
+	fseek(f_in, index_offset, SEEK_SET); //Setting faces reading position
 	indices = malloc(index_cnt * sizeof(unsigned short));
 	fread(indices, 1, sizeof(unsigned short)*index_cnt, f_in);
 	
