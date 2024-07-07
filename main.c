@@ -93,7 +93,7 @@ int main(int argc, char *argv[])
         vert_offset++;
     }
 
-	fseek(f_in, 0x14, SEEK_SET); //Temp solution aka hacki the hack
+	fseek(f_in, 0x24, SEEK_SET); //Temp solution aka hacki the hack
 	fread(&vert_cnt, 1, sizeof(vert_cnt), f_in);
 	
 	//fseek(f_in, 0x2c, SEEK_SET); //Temp solution aka hacki the hack
@@ -102,12 +102,13 @@ int main(int argc, char *argv[])
 	fread(verts, 1, sizeof(struct MYVERTEX)*vert_cnt, f_in);
 	
 	for(i = 0; i < vert_cnt; i++) {
+		verts[i].pos[0] = -verts[i].pos[0]; //Inverting vertices in X axis.
 		verts[i].pos[1] = -verts[i].pos[1]; //Inverting vertices in Z axis.
 		fprintf(f_out, "v %f %f %f\n", verts[i].pos[0], verts[i].pos[1], verts[i].pos[2]);
 	}
 	for(i = 0; i < vert_cnt; i++) {
 		verts[i].normal[0] = -verts[i].normal[0]; //Inverting X axis normals to sync changes with vertices.
-		verts[i].normal[2] = -verts[i].normal[2]; //Inverting Y axis normals to sync changes with vertices.
+		verts[i].normal[1] = -verts[i].normal[1]; //Inverting Z axis normals to sync changes with vertices.
 		fprintf(f_out, "vn %f %f %f\n", verts[i].normal[0], verts[i].normal[1], verts[i].normal[2]); 
 	}
 	for(i = 0; i < vert_cnt; i++) {
@@ -119,7 +120,7 @@ int main(int argc, char *argv[])
 	fread(&index_cnt, 1, sizeof(index_cnt), f_in);
 	
 
-	fseek(f_in, 0x78cc, SEEK_SET); //Temp solution aka hacki the hack
+	fseek(f_in, 0x6368, SEEK_SET); //Temp solution aka hacki the hack
 	indices = malloc(index_cnt * sizeof(unsigned short));
 	fread(indices, 1, sizeof(unsigned short)*index_cnt, f_in);
 	
