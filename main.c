@@ -48,7 +48,7 @@ int main(int argc, char *argv[])
     unsigned char index_offset_bytes[8];
     unsigned char index_cnt_offset_bytes[4];
     unsigned char index_cnt_offset_hex_value[4];
-    unsigned char vert_offset_bytes[4];
+    unsigned char vert_offset_bytes[8];
 	
     size_t index_offset_end_pos = 0;
     size_t index_offset_start_pos = 0;
@@ -100,7 +100,7 @@ int main(int argc, char *argv[])
             index_offset_bytes[1] == 0x00 &&
             index_offset_bytes[2] == 0x01 &&
             index_offset_bytes[3] == 0x00 &&
-            index_offset_bytes[4] == 0x02 &&
+            index_offset_bytes[4] >  0x00 &&
             index_offset_bytes[5] == 0x00 &&
             index_offset_bytes[6] >  0x00 &&
             index_offset_bytes[7] == 0x00) {
@@ -180,28 +180,32 @@ int main(int argc, char *argv[])
 
     fseek(f_in, 0, SEEK_SET);
 
-    while (fread(vert_offset_bytes, 1, 4, f_in) == 4) { //Finding beginning of vertices by pattern.
+    while (fread(vert_offset_bytes, 1, 8, f_in) == 8) { //Finding beginning of vertices by pattern.
         if (vert_offset_bytes[0] == 0x00 &&
             vert_offset_bytes[1] > 0x00 &&
             vert_offset_bytes[2] > 0x00 &&
-            vert_offset_bytes[3] > 0x00) {
+			vert_offset_bytes[3] > 0x00 &&
+            vert_offset_bytes[4] > 0x00 &&
+			vert_offset_bytes[5] > 0x00 &&
+            vert_offset_bytes[6] > 0x00 &&
+            vert_offset_bytes[7] > 0x00) {
             vert_offset_bytes_found = 1;
             vert_offset += 1;
             break;
         }
-        fseek(f_in, -3, SEEK_CUR); //Back to the beginning.
+        fseek(f_in, -7, SEEK_CUR); //Back to the beginning.
         vert_offset++;
     }
 	
     if (vert_offset_bytes_found) {
-            printf("Vertex size has been found at position: 0x%lX\n", vert_offset);
+            printf("Your vertex offset HEX value is: 0x%lX\n", vert_offset);
     } else {
             fprintf(stderr, "Error finding vertex bytes. Are you using the right file?\n"); //I think you just write a bad code. Sad.
             return 1;
     }
 	
 //Finding of the number of vertices.	
-    vert_cnt_offset = index_cnt_offset - 4;
+    vert_cnt_offset = index_cnt_offset - 4; //Vertexes are always behind indexes. That's all the magic
 	
     printf("Vertex count value has been found at position: 0x%lX\n", vert_cnt_offset);
 
