@@ -6,5 +6,7 @@ Drag model file into exe or make cmd file in the following format: ```jamc.exe y
 Name           | Compiled
 ---------------| ----------------------
 Props          | Yes
-Ragdolls       | No
+Ragdolls       | Bad
 Levels         | No
+## Building Code
+To compile the code use: ```Visual Studio .Net 2003``` or ```Dev-C++```
