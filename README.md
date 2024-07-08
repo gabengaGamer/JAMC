@@ -8,3 +8,5 @@ Name           | Compiled
 Props          | Yes
 Ragdolls       | Bad
 Levels         | No
+## Building Code
+To compile the code use: ```Visual Studio .Net 2003``` or ```Dev-C++```
