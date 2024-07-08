@@ -20,41 +20,44 @@
 
 struct MYVERTEX
 {
-	float pos[3];
-	float normal[3];
-	float tc[2];
+    float pos[3];
+    float normal[3];
+    float tc[2];
 };
 
 int main(int argc, char *argv[])	
 {
-	unsigned i;
-	unsigned vert_cnt;
-	unsigned index_cnt;
+    unsigned i;
+    unsigned vert_cnt;
+    unsigned index_cnt;
 
-	struct MYVERTEX *verts;
-	unsigned short *indices;
+    struct MYVERTEX *verts;
+    unsigned short *indices;
 
     int voffs = 1;
-	unsigned short *pi;
-	unsigned short v1, v2, v3;
+    unsigned short *pi;
+    unsigned short v1, v2, v3;
 	
     int index_offset_bytes_found = 0;
-	int index_cnt_offset_bytes_found = 0;
-	int vert_offset_bytes_found = 0;
-	size_t index_offset = 0;
-	size_t index_cnt_offset = 0;
+    int index_cnt_offset_bytes_found = 0;
+    int vert_offset_bytes_found = 0;
+    size_t index_offset = 0;
+    size_t index_cnt_offset = 0;
     size_t vert_offset = 0;
-	size_t vert_cnt_offset = 0;
-	unsigned char index_offset_bytes[8];
-	unsigned char index_cnt_offset_bytes[4];
-	unsigned char index_cnt_offset_hex_value[4];
-	unsigned char vert_offset_bytes[4];
+    size_t vert_cnt_offset = 0;
+    unsigned char index_offset_bytes[8];
+    unsigned char index_cnt_offset_bytes[4];
+    unsigned char index_cnt_offset_hex_value[4];
+    unsigned char vert_offset_bytes[4];
 	
-	size_t index_offset_end_pos = 0;
-	size_t index_offset_start_pos = 0;
+    size_t index_offset_end_pos = 0;
+    size_t index_offset_start_pos = 0;
     size_t index_offset_length = 0;
     size_t divided_index_offset_length = 0;
 	
+    int index_offset_end_pos_null_counter = 0;
+    int index_offset_end_pos_null_counter_vault = 0;
+    size_t index_offset_end_null_pos = 0;
 //=============================================================================
 // FILE SYSTEM
 //=============================================================================
@@ -65,7 +68,7 @@ int main(int argc, char *argv[])
     FILE *f_in;
     FILE *f_out;
 
-	input_file = argv[1];
+    input_file = argv[1];
     output_file = "output.obj";
 
     if (argc < 2) {
@@ -75,13 +78,13 @@ int main(int argc, char *argv[])
 
     f_in = fopen(input_file, "rb");
     if (!f_in) {
-		fprintf(stderr, "Error loading input file!\n", argv[0]);
+        fprintf(stderr, "Error loading input file!\n", argv[0]);
         return 1;
     }
 
     f_out = fopen(output_file, "w");
     if (!f_out) {
-		fprintf(stderr, "Error loading output file!\n", argv[0]);
+        fprintf(stderr, "Error loading output file!\n", argv[0]);
         fclose(f_in);
         return 1;
     }
@@ -96,10 +99,10 @@ int main(int argc, char *argv[])
         if (index_offset_bytes[0] == 0x00 &&
             index_offset_bytes[1] == 0x00 &&
             index_offset_bytes[2] == 0x01 &&
-			index_offset_bytes[3] == 0x00 &&
-			index_offset_bytes[4] == 0x02 &&
-			index_offset_bytes[5] == 0x00 &&
-			index_offset_bytes[6] >  0x00 &&
+            index_offset_bytes[3] == 0x00 &&
+            index_offset_bytes[4] == 0x02 &&
+            index_offset_bytes[5] == 0x00 &&
+            index_offset_bytes[6] >  0x00 &&
             index_offset_bytes[7] == 0x00) {
             index_offset_bytes_found = 1;
             break;
@@ -110,18 +113,37 @@ int main(int argc, char *argv[])
 
     index_offset_start_pos = index_offset + 20; //Hacky hack! I dont know how it works, but, it actually works!
 	
-	fseek(f_in, 0, SEEK_END);
+    fseek(f_in, 0, SEEK_END);
     index_offset_end_pos = ftell(f_in);
+	
+//Checking for the extra zeros in the indexes.
+    index_offset_end_null_pos = index_offset_end_pos - 1; //Set the starting search position
+	
+    while (index_offset_end_null_pos >= 0){
+        fseek(f_in, index_offset_end_null_pos, SEEK_SET); //Some models use a lot of extra zeros at the end of indexes. So let's see if there are any extra zeros
+        index_offset_end_pos_null_counter_vault = fgetc(f_in);
+        if (index_offset_end_pos_null_counter_vault == 0x00) {
+            index_offset_end_pos_null_counter++;
+            index_offset_end_null_pos--;
+        }   else {
+            break;
+        }
+    }
 
+    if (index_offset_end_pos_null_counter > 1) {
+        index_offset_end_pos -= (index_offset_end_pos_null_counter - 1); //Rewrite extra zeros
+    }
+	
+//Everything seems fine. Let's continue working with indexes.
     index_offset_length = index_offset_end_pos - index_offset_start_pos + 20; // Why 20 ? I don't know how it happened.
 
     divided_index_offset_length = index_offset_length / 2; //Divide our value to obtain information.
 
-	if (index_offset_bytes_found) {
-        printf("Your index offset HEX value is: 0x%lX\n", divided_index_offset_length);
+    if (index_offset_bytes_found) {
+            printf("Your index offset HEX value is: 0x%lX\n", divided_index_offset_length);
     } else {
-        fprintf(stderr, "Error finding index offset information. Are you using the right file?\n"); //I think you just write a bad code. Sad.
-		return 1;
+            fprintf(stderr, "Error finding index offset information. Are you using the right file?\n"); //I think you just write a bad code. Sad.
+            return 1;
     }
 	
 //Let's convert all this crap into a script-readable format.
@@ -147,11 +169,11 @@ int main(int argc, char *argv[])
 		index_cnt_offset++;
     }
 	
-	if (index_cnt_offset_bytes_found) {
-        printf("Index count value has been found at position: 0x%lX\n", index_cnt_offset);
+    if (index_cnt_offset_bytes_found) {
+            printf("Index count value has been found at position: 0x%lX\n", index_cnt_offset);
     } else {
-        fprintf(stderr, "Error finding index information. Are you using the right file?\n"); //I think you just write a bad code. Sad.
-		return 1;
+            fprintf(stderr, "Error finding index information. Are you using the right file?\n"); //I think you just write a bad code. Sad.
+            return 1;
     }
 
 //========================Now let's prepare the vertexes========================
@@ -171,11 +193,11 @@ int main(int argc, char *argv[])
         vert_offset++;
     }
 	
-	if (vert_offset_bytes_found) {
-        printf("Vertex size has been found at position: 0x%lX\n", vert_offset);
+    if (vert_offset_bytes_found) {
+            printf("Vertex size has been found at position: 0x%lX\n", vert_offset);
     } else {
-        fprintf(stderr, "Error finding vertex bytes. Are you using the right file?\n"); //I think you just write a bad code. Sad.
-		return 1;
+            fprintf(stderr, "Error finding vertex bytes. Are you using the right file?\n"); //I think you just write a bad code. Sad.
+            return 1;
     }
 	
 //Finding of the number of vertices.	
