@@ -23,6 +23,7 @@ struct MYVERTEX
     float pos[3];
     float normal[3];
     float tc[2];
+	float bones[8]; //temp solution
 };
 
 int main(int argc, char *argv[])	
