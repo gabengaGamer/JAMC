@@ -23,7 +23,7 @@ struct MYVERTEX
     float pos[3];
     float normal[3];
     float tc[2];
-	float bones[8]; //temp solution
+	//float bones[8]; //Because I'm only working with OBJ for now. Using bones is not possible. But I can at least convert the mesh.
 };
 
 int main(int argc, char *argv[])	
@@ -44,7 +44,7 @@ int main(int argc, char *argv[])
     int vert_offset_bytes_found = 0;
     size_t index_offset = 0;
     size_t index_cnt_offset = 0;
-    size_t vert_offset = 0;
+    size_t vert_offset = 0;                                  //Fuck!!! There are too many identifiers here. It will be necessary to reduce their number in the future
     size_t vert_cnt_offset = 0;
     unsigned char index_offset_bytes[8];
     unsigned char index_cnt_offset_bytes[4];
@@ -59,6 +59,10 @@ int main(int argc, char *argv[])
     int index_offset_end_pos_null_counter = 0;
     int index_offset_end_pos_null_counter_vault = 0;
     size_t index_offset_end_null_pos = 0;
+	
+	int vertex_offset_bones_null_count = 0;
+	unsigned char vertex_offset_bones_check_bytes[20];
+	
 //=============================================================================
 // FILE SYSTEM
 //=============================================================================
@@ -94,7 +98,7 @@ int main(int argc, char *argv[])
 // PREPARATION
 //=============================================================================
 
-	fprintf(stderr, "Processing\n", argv[0]);
+	fprintf(stderr, "Processing...\n", argv[0]);
 	
 	while (fread(index_offset_bytes, 1, 8, f_in) == 8) { //Finding beginning of faces by pattern.
         if (index_offset_bytes[0] == 0x00 &&
@@ -141,7 +145,9 @@ int main(int argc, char *argv[])
     divided_index_offset_length = index_offset_length / 2; //Divide our value to obtain information.
 
     if (index_offset_bytes_found) {
+            #ifdef DEBUG
             printf("Your index offset HEX value is: 0x%lX\n", divided_index_offset_length);
+			#endif
     } else {
             fprintf(stderr, "Error finding index offset information. Are you using the right file?\n"); //I think you just write a bad code. Sad.
             return 1;
@@ -152,9 +158,9 @@ int main(int argc, char *argv[])
     index_cnt_offset_hex_value[1] = (divided_index_offset_length >> 8) & 0xFF;
     index_cnt_offset_hex_value[2] = (divided_index_offset_length >> 16) & 0xFF;
     index_cnt_offset_hex_value[3] = (divided_index_offset_length >> 24) & 0xFF;
-
+    #ifdef DEBUG
     printf("Structured index offset HEX value: %02X %02X %02X %02X\n",index_cnt_offset_hex_value[0], index_cnt_offset_hex_value[1], index_cnt_offset_hex_value[2], index_cnt_offset_hex_value[3]);
-	
+	#endif
 //Search for the hex value in the file.
     fseek(f_in, 0, SEEK_SET);
 	
@@ -171,12 +177,14 @@ int main(int argc, char *argv[])
     }
 	
     if (index_cnt_offset_bytes_found) {
+		    #ifdef DEBUG
             printf("Index count value has been found at position: 0x%lX\n", index_cnt_offset);
+			#endif
     } else {
             fprintf(stderr, "Error finding index information. Are you using the right file?\n"); //I think you just write a bad code. Sad.
             return 1;
     }
-
+	
 //========================Now let's prepare the vertexes========================
 
     fseek(f_in, 0, SEEK_SET);
@@ -199,7 +207,9 @@ int main(int argc, char *argv[])
     }
 	
     if (vert_offset_bytes_found) {
+		    #ifdef DEBUG
             printf("Your vertex offset HEX value is: 0x%lX\n", vert_offset);
+			#endif
     } else {
             fprintf(stderr, "Error finding vertex bytes. Are you using the right file?\n"); //I think you just write a bad code. Sad.
             return 1;
@@ -208,9 +218,27 @@ int main(int argc, char *argv[])
 //Finding of the number of vertices.	
     vert_cnt_offset = index_cnt_offset - 4; //Vertexes are always behind indexes. That's all the magic
 	
+	#ifdef DEBUG
     printf("Vertex count value has been found at position: 0x%lX\n", vert_cnt_offset);
+	#endif
+//========================Checking the model for bones=========================
 
-	
+    fseek(f_in, vert_offset + 20, SEEK_SET);
+    fread(vertex_offset_bones_check_bytes, 1, 20, f_in); //Move +20 bytes to the expected location of the bones.
+
+    for (i = 0; i < 20; i++) {
+        if (vertex_offset_bones_check_bytes[i] == 0x00) { //Counting nulls
+            vertex_offset_bones_null_count++;
+        }
+        if (vertex_offset_bones_null_count >= 4) { //More than 4? Great, it's a ragdoll.
+			#define bones
+		    #ifdef DEBUG
+			printf("Ragdoll has been detected\n");
+			#endif
+			break;
+        }
+    }
+
 //=============================================================================
 // CONVERTING
 //=============================================================================
