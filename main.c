@@ -13,31 +13,13 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
+#include "main.h"
 
 //=============================================================================
 // STRUCTURIZING
 //=============================================================================
 
-struct MYVERTEX
-{
-    float pos[3];
-    float normal[3];
-    float tc[2];
-	//float bones[8]; //Because I'm only working with OBJ for now. Using bones is not possible. But I can at least convert the mesh.
-};
-
-int main(int argc, char *argv[])	
-{
     unsigned i;
-    unsigned vert_cnt;
-    unsigned index_cnt;
-
-    struct MYVERTEX *verts;
-    unsigned short *indices;
-
-    int voffs = 1;
-    unsigned short *pi;
-    unsigned short v1, v2, v3;
 	
     int index_offset_bytes_found = 0;
     int index_cnt_offset_bytes_found = 0;
@@ -63,41 +45,19 @@ int main(int argc, char *argv[])
 	int vertex_offset_bones_null_count = 0;
 	unsigned char vertex_offset_bones_check_bytes[20];
 	
-//=============================================================================
-// FILE SYSTEM
-//=============================================================================
-
-    const char *input_file;
+	const char *input_file;
     const char *output_file;
 
     FILE *f_in;
     FILE *f_out;
 
-    input_file = argv[1];
-    output_file = "output.obj";
 
-    if (argc < 2) {
-        fprintf(stderr, "Usage: %s <input_file>\n", argv[0]);
-        return 1;
-    }
-
-    f_in = fopen(input_file, "rb");
-    if (!f_in) {
-        fprintf(stderr, "Error loading input file!\n", argv[0]);
-        return 1;
-    }
-
-    f_out = fopen(output_file, "w");
-    if (!f_out) {
-        fprintf(stderr, "Error loading output file!\n", argv[0]);
-        fclose(f_in);
-        return 1;
-    }
-	
+   int total_null_count = 0;
 //=============================================================================
 // PREPARATION
 //=============================================================================
-
+int jamc_preparation(int argc, char *argv[])	
+{
 	fprintf(stderr, "Processing...\n", argv[0]);
 	
 	while (fread(index_offset_bytes, 1, 8, f_in) == 8) { //Finding beginning of faces by pattern.
@@ -138,14 +98,14 @@ int main(int argc, char *argv[])
     if (index_offset_end_pos_null_counter > 1) {
         index_offset_end_pos -= (index_offset_end_pos_null_counter - 1); //Rewrite extra zeros
     }
-	
+
 //Everything seems fine. Let's continue working with indexes.
     index_offset_length = index_offset_end_pos - index_offset_start_pos + 20; // Why 20 ? I don't know how it happened.
 
     divided_index_offset_length = index_offset_length / 2; //Divide our value to obtain information.
 
     if (index_offset_bytes_found) {
-            #ifdef DEBUG
+            #ifdef _DEBUG
             printf("Your index offset HEX value is: 0x%lX\n", divided_index_offset_length);
 			#endif
     } else {
@@ -158,7 +118,7 @@ int main(int argc, char *argv[])
     index_cnt_offset_hex_value[1] = (divided_index_offset_length >> 8) & 0xFF;
     index_cnt_offset_hex_value[2] = (divided_index_offset_length >> 16) & 0xFF;
     index_cnt_offset_hex_value[3] = (divided_index_offset_length >> 24) & 0xFF;
-    #ifdef DEBUG
+    #ifdef _DEBUG
     printf("Structured index offset HEX value: %02X %02X %02X %02X\n",index_cnt_offset_hex_value[0], index_cnt_offset_hex_value[1], index_cnt_offset_hex_value[2], index_cnt_offset_hex_value[3]);
 	#endif
 //Search for the hex value in the file.
@@ -177,7 +137,7 @@ int main(int argc, char *argv[])
     }
 	
     if (index_cnt_offset_bytes_found) {
-		    #ifdef DEBUG
+		    #ifdef _DEBUG
             printf("Index count value has been found at position: 0x%lX\n", index_cnt_offset);
 			#endif
     } else {
@@ -207,7 +167,7 @@ int main(int argc, char *argv[])
     }
 	
     if (vert_offset_bytes_found) {
-		    #ifdef DEBUG
+		    #ifdef _DEBUG
             printf("Your vertex offset HEX value is: 0x%lX\n", vert_offset);
 			#endif
     } else {
@@ -218,30 +178,62 @@ int main(int argc, char *argv[])
 //Finding of the number of vertices.	
     vert_cnt_offset = index_cnt_offset - 4; //Vertexes are always behind indexes. That's all the magic
 	
-	#ifdef DEBUG
+	#ifdef _DEBUG
     printf("Vertex count value has been found at position: 0x%lX\n", vert_cnt_offset);
 	#endif
 //========================Checking the model for bones=========================
 
-    fseek(f_in, vert_offset + 20, SEEK_SET);
-    fread(vertex_offset_bones_check_bytes, 1, 20, f_in); //Move +20 bytes to the expected location of the bones.
+	total_null_count = vert_offset + 32; // 20 - совокупность байтов координат,нормалей и uv координат.
+    printf("sex: 0x%lX\n", total_null_count);
+	
+    fseek(f_in, vert_offset + 32, SEEK_SET); // 32 - a set of bytes of coordinates, normals and uv coordinates.
+    fread(vertex_offset_bones_check_bytes, 1, 20, f_in); //In theory, 32 bytes should be checked here but not 20, I have problems with this.
 
-    for (i = 0; i < 20; i++) {
-        if (vertex_offset_bones_check_bytes[i] == 0x00) { //Counting nulls
+    for (i = 0; i < 32; i++) {
+        if (vertex_offset_bones_check_bytes[i] == 0x00) { //Counting nulls.
             vertex_offset_bones_null_count++;
+			printf("CC0: 0x%lX\n", vertex_offset_bones_null_count);
         }
-        if (vertex_offset_bones_null_count >= 4) { //More than 4? Great, it's a ragdoll.
-			#define bones
-		    #ifdef DEBUG
+        if (vertex_offset_bones_null_count >= 16) { //16 or bigger? Great, it's a ragdoll.
+		    printf("CC2: 0x%lX\n", vertex_offset_bones_null_count);
+			//#define skingeom
+		    #ifdef _DEBUG	
 			printf("Ragdoll has been detected\n");
 			#endif
 			break;
         }
     }
+    return jamc_convertation(argc, argv);
+}
+
+//=============================================================================
+// VERTEX STRUCTURIZING
+//=============================================================================
+struct MYVERTEX
+{
+    float pos[3];
+    float normal[3];
+    float tc[2];
+	#ifdef skingeom
+	float bone[8]; //Because I'm only working with OBJ for now. Using bones is not possible. But I can at least convert the mesh.
+	#endif
+};
 
 //=============================================================================
 // CONVERTING
 //=============================================================================
+int jamc_convertation(int argc, char *argv[])	
+{
+    unsigned i;
+    unsigned vert_cnt;
+    unsigned index_cnt;
+
+    struct MYVERTEX *verts;
+    unsigned short *indices;
+
+    int voffs = 1;
+    unsigned short *pi;
+    unsigned short v1, v2, v3;
 
     fprintf(stderr, "Converting...\n", argv[0]);
 
@@ -249,7 +241,7 @@ int main(int argc, char *argv[])
 	fread(&vert_cnt, 1, sizeof(vert_cnt), f_in);
 	
 	fseek(f_in, vert_offset, SEEK_SET); //Setting vertex reading position.
-    verts = malloc(sizeof(struct MYVERTEX)*vert_cnt);
+    verts = (struct MYVERTEX *)malloc(sizeof(struct MYVERTEX) * vert_cnt);
 	fread(verts, 1, sizeof(struct MYVERTEX)*vert_cnt, f_in);
 	
 	for(i = 0; i < vert_cnt; i++) {
@@ -271,7 +263,7 @@ int main(int argc, char *argv[])
 	fread(&index_cnt, 1, sizeof(index_cnt), f_in);
 	
 	fseek(f_in, index_offset, SEEK_SET); //Setting faces reading position.
-	indices = malloc(index_cnt * sizeof(unsigned short));
+	indices = (unsigned short *)malloc(index_cnt * sizeof(unsigned short));
 	fread(indices, 1, sizeof(unsigned short)*index_cnt, f_in);
 	
 //=============================================================================
@@ -308,13 +300,17 @@ int main(int argc, char *argv[])
     v1 = v2;
     v2 = v3;
 }
+    free(verts);
+	free(indices);
+	
+    return jamc_finalization(argc, argv);
+}
 
 //=============================================================================
 // FINALIZING
 //=============================================================================
-
-	free(verts);
-	free(indices);
+int jamc_finalization(int argc, char *argv[])	
+{
 
 	fclose(f_in);
 	fclose(f_out);
@@ -322,4 +318,33 @@ int main(int argc, char *argv[])
 	fprintf(stderr, "Conversion complete\n", argv[0]); //Sexy.
 	
 	return 0;	
+}
+
+//=============================================================================
+// FILE SYSTEM
+//=============================================================================
+int main(int argc, char *argv[])	
+{
+
+    input_file = argv[1];
+    output_file = "output.obj";
+
+    if (argc < 2) {
+        fprintf(stderr, "Usage: %s <input_file>\n", argv[0]);
+        return 1;
+    }
+
+    f_in = fopen(input_file, "rb");
+    if (!f_in) {
+        fprintf(stderr, "Error loading input file!\n", argv[0]);
+        return 1;
+    }
+
+    f_out = fopen(output_file, "w");
+    if (!f_out) {
+        fprintf(stderr, "Error loading output file!\n", argv[0]);
+        fclose(f_in);
+        return 1;
+    }
+	return jamc_preparation(argc, argv);
 }
