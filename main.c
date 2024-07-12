@@ -14,6 +14,9 @@
 #include <stdio.h>
 #include <string.h>
 #include "main.h"
+#include "prop.h"
+#include "level.h"
+#include "ragdoll.h"
 
 //=============================================================================
 // STRUCTURIZING
@@ -43,7 +46,7 @@
     size_t index_offset_end_null_pos = 0;
 	
 	int vertex_offset_bones_null_count = 0;
-	unsigned char vertex_offset_bones_check_bytes[20];
+	unsigned char vertex_offset_bones_check_bytes[32];
 	
 	const char *input_file;
     const char *output_file;
@@ -51,8 +54,9 @@
     FILE *f_in;
     FILE *f_out;
 
-
-   int total_null_count = 0;
+    #ifdef _DEBUG
+    int total_null_count = 0;
+	#endif
 //=============================================================================
 // PREPARATION
 //=============================================================================
@@ -183,127 +187,31 @@ int jamc_preparation(int argc, char *argv[])
 	#endif
 //========================Checking the model for bones=========================
 
+    #ifdef _DEBUG
 	total_null_count = vert_offset + 32; // 20 - совокупность байтов координат,нормалей и uv координат.
-    printf("sex: 0x%lX\n", total_null_count);
+    printf("Counter start: 0x%lX\n", total_null_count);
+	#endif
 	
     fseek(f_in, vert_offset + 32, SEEK_SET); // 32 - a set of bytes of coordinates, normals and uv coordinates.
-    fread(vertex_offset_bones_check_bytes, 1, 20, f_in); //In theory, 32 bytes should be checked here but not 20, I have problems with this.
+    fread(vertex_offset_bones_check_bytes, 1, 32, f_in); //In theory, 32 bytes should be checked here but not 20, I have problems with this.
 
     for (i = 0; i < 32; i++) {
         if (vertex_offset_bones_check_bytes[i] == 0x00) { //Counting nulls.
             vertex_offset_bones_null_count++;
 			printf("CC0: 0x%lX\n", vertex_offset_bones_null_count);
         }
-        if (vertex_offset_bones_null_count >= 16) { //16 or bigger? Great, it's a ragdoll.
+    }
+	if (vertex_offset_bones_null_count >= 16) {
 		    printf("CC2: 0x%lX\n", vertex_offset_bones_null_count);
-			//#define skingeom
 		    #ifdef _DEBUG	
 			printf("Ragdoll has been detected\n");
 			#endif
-			break;
-        }
+			return jamc_ragdoll_convertation(argc, argv);
+    } else {
+			return jamc_prop_convertation(argc, argv);
     }
-    return jamc_convertation(argc, argv);
-}
-
-//=============================================================================
-// VERTEX STRUCTURIZING
-//=============================================================================
-struct MYVERTEX
-{
-    float pos[3];
-    float normal[3];
-    float tc[2];
-	#ifdef skingeom
-	float bone[8]; //Because I'm only working with OBJ for now. Using bones is not possible. But I can at least convert the mesh.
-	#endif
-};
-
-//=============================================================================
-// CONVERTING
-//=============================================================================
-int jamc_convertation(int argc, char *argv[])	
-{
-    unsigned i;
-    unsigned vert_cnt;
-    unsigned index_cnt;
-
-    struct MYVERTEX *verts;
-    unsigned short *indices;
-
-    int voffs = 1;
-    unsigned short *pi;
-    unsigned short v1, v2, v3;
-
-    fprintf(stderr, "Converting...\n", argv[0]);
-
-	fseek(f_in, vert_cnt_offset, SEEK_SET); //Setting vertex count.
-	fread(&vert_cnt, 1, sizeof(vert_cnt), f_in);
-	
-	fseek(f_in, vert_offset, SEEK_SET); //Setting vertex reading position.
-    verts = (struct MYVERTEX *)malloc(sizeof(struct MYVERTEX) * vert_cnt);
-	fread(verts, 1, sizeof(struct MYVERTEX)*vert_cnt, f_in);
-	
-	for(i = 0; i < vert_cnt; i++) {
-		verts[i].pos[0] = -verts[i].pos[0]; //Inverting vertices in X axis.
-		verts[i].pos[1] = -verts[i].pos[1]; //Inverting vertices in Z axis.
-		fprintf(f_out, "v %f %f %f\n", verts[i].pos[0], verts[i].pos[1], verts[i].pos[2]);
-	}
-	for(i = 0; i < vert_cnt; i++) {
-		verts[i].normal[0] = -verts[i].normal[0]; //Inverting X axis normals to sync changes with vertices.
-		verts[i].normal[1] = -verts[i].normal[1]; //Inverting Z axis normals to sync changes with vertices.
-		fprintf(f_out, "vn %f %f %f\n", verts[i].normal[0], verts[i].normal[1], verts[i].normal[2]); 
-	}
-	for(i = 0; i < vert_cnt; i++) {
-		verts[i].tc[1] = 1.0f -verts[i].tc[1]; //Inverting UV to sync with texture maps.
-		fprintf(f_out, "vt %f %f\n", verts[i].tc[0], verts[i].tc[1]); 
-	}
-
-	fseek(f_in, index_cnt_offset, SEEK_SET); //Setting faces count.
-	fread(&index_cnt, 1, sizeof(index_cnt), f_in);
-	
-	fseek(f_in, index_offset, SEEK_SET); //Setting faces reading position.
-	indices = (unsigned short *)malloc(index_cnt * sizeof(unsigned short));
-	fread(indices, 1, sizeof(unsigned short)*index_cnt, f_in);
-	
-//=============================================================================
-// MESH FIX UP
-//=============================================================================
-
-//Export triangle strips.
-	pi = indices;
-	v1 = pi[0]; 
-	v2 = pi[1];
-	
-    for(i = 2; i < index_cnt; i++) {
-        v3 = pi[i];
-
-//Skip degenerate faces.
-    if(v1 == v2 || v1 == v3 || v2 == v3)
-       goto next_face;
-
-//Flip every second face.
-    if((i - 2) % 2)
-	    fprintf(f_out, "f %u/%u/%u %u/%u/%u %u/%u/%u\n",
-        v3+voffs, v3+voffs, v3+voffs, 
-		v2+voffs, v2+voffs, v2+voffs, 
-		v1+voffs, v1+voffs, v1+voffs
-	    );
-    else
-	    fprintf(f_out, "f %u/%u/%u %u/%u/%u %u/%u/%u\n",
-        v1+voffs, v1+voffs, v1+voffs, 
-		v2+voffs, v2+voffs, v2+voffs, 
-		v3+voffs, v3+voffs, v3+voffs
-	    );
-
-    next_face:
-    v1 = v2;
-    v2 = v3;
-}
-    free(verts);
-	free(indices);
-	
-    return jamc_finalization(argc, argv);
+	fprintf(stderr, "Error counting zeros. Are you using the right file?\n");
+	return 1;
 }
 
 //=============================================================================
@@ -311,11 +219,10 @@ int jamc_convertation(int argc, char *argv[])
 //=============================================================================
 int jamc_finalization(int argc, char *argv[])	
 {
-
 	fclose(f_in);
 	fclose(f_out);
 
-	fprintf(stderr, "Conversion complete\n", argv[0]); //Sexy.
+	fprintf(stderr, "Conversion complete.\n", argv[0]); //Sexy.
 	
 	return 0;	
 }
@@ -325,7 +232,6 @@ int jamc_finalization(int argc, char *argv[])
 //=============================================================================
 int main(int argc, char *argv[])	
 {
-
     input_file = argv[1];
     output_file = "output.obj";
 

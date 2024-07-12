@@ -26,7 +26,8 @@
 				BasicRuntimeChecks="0"
 				RuntimeLibrary="1"
 				WarningLevel="3"
-				DebugInformationFormat="3"/>
+				DebugInformationFormat="3"
+				CompileAs="2"/>
 			<Tool
 				Name="VCCustomBuildTool"/>
 			<Tool
@@ -107,13 +108,34 @@
 			Filter="cpp;c;cxx;def;odl;idl;hpj;bat;asm;asmx"
 			UniqueIdentifier="{4FC737F1-C7A5-4376-A066-2A32D752A2FF}">
 			<File
+				RelativePath=".\level.c">
+			</File>
+			<File
 				RelativePath="main.c">
+			</File>
+			<File
+				RelativePath=".\prop.c">
+			</File>
+			<File
+				RelativePath=".\ragdoll.c">
 			</File>
 		</Filter>
 		<Filter
 			Name="Header Files"
 			Filter="h;hpp;hxx;hm;inl;inc;xsd"
 			UniqueIdentifier="{93995380-89BD-4b04-88EB-625FBE52EBFB}">
+			<File
+				RelativePath=".\level.h">
+			</File>
+			<File
+				RelativePath=".\main.h">
+			</File>
+			<File
+				RelativePath=".\prop.h">
+			</File>
+			<File
+				RelativePath=".\ragdoll.h">
+			</File>
 		</Filter>
 		<Filter
 			Name="Resource Files"
