@@ -11,6 +11,149 @@
 #include "level.h"
 
 //=============================================================================
+// LEVEL PROCESSING
+//=============================================================================
+int jamc_level_preparation(int argc, char *argv[])	
+{
+	fseek(f_in, 0, SEEK_SET);
+	
+	while (fread(index_offset_bytes, 1, 8, f_in) == 8) { //Finding beginning of faces by pattern.
+        if (index_offset_bytes[0] == 0x00 &&
+            index_offset_bytes[1] == 0x00 &&
+            index_offset_bytes[2] == 0x01 &&
+            index_offset_bytes[3] == 0x00 &&
+            index_offset_bytes[4] >  0x00 &&
+            index_offset_bytes[5] == 0x00 &&
+            index_offset_bytes[6] >  0x00 &&
+            index_offset_bytes[7] == 0x00) {
+            index_offset_bytes_found = 1;
+            break;
+        }
+        fseek(f_in, -7, SEEK_CUR); //Back to the beginning.
+        index_offset++;
+    }
+	
+	if (index_offset_bytes_found) {
+            #ifdef _DEBUG
+            printf("Index offset starts in: 0x%lX\n", index_offset_bytes);
+			#endif
+    } else {
+            fprintf(stderr, "Error finding index offset start. Are you using the right file?\n"); //I think you just write a bad code. Sad.
+            return 1;
+    }
+
+    index_offset_start_pos = index_offset + 20; //Hacky hack! I dont know how it works, but, it actually works!
+	
+    fseek(f_in, 0, SEEK_END);
+    index_offset_end_pos = ftell(f_in);
+	
+    #ifdef _DEBUG
+    printf("Index offset ends in: 0x%lX\n", index_offset_end_pos);
+	#endif
+	
+//Checking for the extra zeros in the indexes.
+    index_offset_end_null_pos = index_offset_end_pos - 1; //Set the starting search position
+	
+    while (index_offset_end_null_pos >= 0){
+        fseek(f_in, index_offset_end_null_pos, SEEK_SET); //Some models use a lot of extra zeros at the end of indexes. So let's see if there are any extra zeros
+        index_offset_end_pos_null_counter_vault = fgetc(f_in);
+        if (index_offset_end_pos_null_counter_vault == 0x00) {
+            index_offset_end_pos_null_counter++;
+            index_offset_end_null_pos--;
+        }   else {
+            break;
+        }
+    }
+
+    if (index_offset_end_pos_null_counter > 1) {
+        index_offset_end_pos -= (index_offset_end_pos_null_counter - 1); //Rewrite extra zeros
+    }
+
+//Everything seems fine. Let's continue working with indexes.
+    index_offset_length = index_offset_end_pos - index_offset_start_pos + 20; // Why 20 ? I don't know how it happened.
+
+    divided_index_offset_length = index_offset_length / 2; //Divide our value to obtain information.
+
+    if (index_offset_bytes_found) {
+            #ifdef _DEBUG
+            printf("Index offset count value is: 0x%lX\n", divided_index_offset_length);
+			#endif
+    } else {
+            fprintf(stderr, "Error finding index offset count value. Are you using the right file?\n"); //I think you just write a bad code. Sad.
+            return 1;
+    }
+	
+//Let's convert all this crap into a script-readable format.
+    index_cnt_offset_hex_value[0] = divided_index_offset_length & 0xFF;
+    index_cnt_offset_hex_value[1] = (divided_index_offset_length >> 8) & 0xFF;
+    index_cnt_offset_hex_value[2] = (divided_index_offset_length >> 16) & 0xFF;
+    index_cnt_offset_hex_value[3] = (divided_index_offset_length >> 24) & 0xFF;
+	
+    #ifdef _DEBUG
+    printf("Structured index offset count value in HEX is: %02X %02X %02X %02X\n",index_cnt_offset_hex_value[0], index_cnt_offset_hex_value[1], index_cnt_offset_hex_value[2], index_cnt_offset_hex_value[3]);
+	#endif
+	
+//Search for the hex value in the file.
+    fseek(f_in, 0, SEEK_SET);
+	
+    while (fread(index_cnt_offset_bytes, 1, 4, f_in) == 4) {
+        if (index_cnt_offset_bytes[0] == index_cnt_offset_hex_value[0] &&
+            index_cnt_offset_bytes[1] == index_cnt_offset_hex_value[1] &&
+            index_cnt_offset_bytes[2] == index_cnt_offset_hex_value[2] &&
+            index_cnt_offset_bytes[3] == index_cnt_offset_hex_value[3]) {
+            index_cnt_offset_bytes_found = 1;
+            break;
+        }
+        fseek(f_in, -3, SEEK_CUR); //Back to the beginning.
+		index_cnt_offset++;
+    }
+	
+    if (index_cnt_offset_bytes_found) {
+		    #ifdef _DEBUG
+            printf("Index offset count value has been found at position: 0x%lX\n", index_cnt_offset);
+			#endif
+    } else {
+            fprintf(stderr, "Error finding index offset count value. Are you using the right file?\n"); //I think you just write a bad code. Sad.
+            return 1;
+    }
+	
+//========================Now let's prepare the vertexes========================
+
+    fseek(f_in, 0, SEEK_SET);
+
+    while (fread(vert_offset_bytes, 1, 8, f_in) == 8) { //Finding beginning of vertices by pattern.
+        if (vert_offset_bytes[0] == 0x00 &&
+            vert_offset_bytes[1] > 0x00 &&
+            vert_offset_bytes[2] > 0x00 &&
+			vert_offset_bytes[3] > 0x00 &&
+            vert_offset_bytes[4] > 0x00 &&
+			vert_offset_bytes[5] > 0x00 &&
+            vert_offset_bytes[6] > 0x00 &&
+            vert_offset_bytes[7] > 0x00) {
+            vert_offset_bytes_found = 1;
+            vert_offset += 1;
+            break;
+        }
+        fseek(f_in, -7, SEEK_CUR); //Back to the beginning.
+        vert_offset++;
+    }
+	
+    if (vert_offset_bytes_found) {
+		    #ifdef _DEBUG
+            printf("Vertex offset starts in: 0x%lX\n", vert_offset);
+			#endif
+    } else {
+            fprintf(stderr, "Error finding offset start. Are you using the right file?\n"); //I think you just write a bad code. Sad.
+            return 1;
+    }
+	
+//Finding of the number of vertices.	
+    vert_cnt_offset = index_cnt_offset - 4; //Vertexes are always behind indexes. That's all the magic
+	
+   return jamc_level_convertation(argc, argv);
+}
+
+//=============================================================================
 // CONVERTING
 //=============================================================================
 int jamc_level_convertation(int argc, char *argv[])	
@@ -71,7 +214,7 @@ int jamc_level_convertation(int argc, char *argv[])
     for(i = 2; i < index_cnt; i++) {
         v3 = pi[i];
 
-//Skip degenerate faces.
+//Skip degenerated faces.
     if(v1 == v2 || v1 == v3 || v2 == v3)
        goto next_face;
 

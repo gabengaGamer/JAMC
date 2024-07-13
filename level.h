@@ -1,6 +1,8 @@
 #ifndef LEVEL_H
 #define LEVEL_H
 
+int jamc_level_preparation(int argc, char *argv[]);
+
 int jamc_level_convertation(int argc, char *argv[]);
 
 struct MYLEVELVERTEX

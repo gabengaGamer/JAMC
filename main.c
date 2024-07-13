@@ -57,12 +57,48 @@
     #ifdef _DEBUG
     int total_null_count = 0;
 	#endif
+	
+    int index_offset_number = 0; 
 //=============================================================================
 // PREPARATION
 //=============================================================================
 int jamc_preparation(int argc, char *argv[])	
 {
 	fprintf(stderr, "Processing...\n", argv[0]);
+	
+//========================Check if our file is a level=========================	
+
+	while (fread(index_offset_bytes, 1, 8, f_in) == 8) { //Count the number of indexes, thus determining whether the model is a level.
+        if (index_offset_bytes[0] == 0x00 &&
+            index_offset_bytes[1] == 0x00 &&
+            index_offset_bytes[2] == 0x01 &&
+            index_offset_bytes[3] == 0x00 &&
+            index_offset_bytes[4] >  0x00 &&
+            index_offset_bytes[5] == 0x00 &&
+            index_offset_bytes[6] >  0x00 &&
+            index_offset_bytes[7] == 0x00) {
+            index_offset_number++;
+        }
+    }
+	
+	#ifdef _DEBUG
+    printf("Number of indexes in the file: 0x%lX\n", index_offset_number);
+	#endif
+	
+	if (index_offset_number > 1) {
+		    #ifdef _DEBUG
+			printf("Level has been detected\n");
+			#endif
+			return jamc_level_preparation(argc, argv);
+    } else {
+		    #ifdef _DEBUG
+		    printf("Level not detected\n");
+			#endif
+    }
+	
+//==============================Basic processing=================================
+	
+	fseek(f_in, 0, SEEK_SET);
 	
 	while (fread(index_offset_bytes, 1, 8, f_in) == 8) { //Finding beginning of faces by pattern.
         if (index_offset_bytes[0] == 0x00 &&
