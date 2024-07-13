@@ -8,6 +8,7 @@ struct MYLEVELVERTEX
     float pos[3];
     float normal[3];
     float tc[2];
+	float zxc[1]; //Something is stored here.
 };
 
 #endif // LEVEL_H
