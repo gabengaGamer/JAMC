@@ -79,11 +79,24 @@ int jamc_preparation(int argc, char *argv[])
         fseek(f_in, -7, SEEK_CUR); //Back to the beginning.
         index_offset++;
     }
+	
+	if (index_offset_bytes_found) {
+            #ifdef _DEBUG
+            printf("Index offset starts in: 0x%lX\n", index_offset_bytes);
+			#endif
+    } else {
+            fprintf(stderr, "Error finding index offset start. Are you using the right file?\n"); //I think you just write a bad code. Sad.
+            return 1;
+    }
 
     index_offset_start_pos = index_offset + 20; //Hacky hack! I dont know how it works, but, it actually works!
 	
     fseek(f_in, 0, SEEK_END);
     index_offset_end_pos = ftell(f_in);
+	
+    #ifdef _DEBUG
+    printf("Index offset ends in: 0x%lX\n", index_offset_end_pos);
+	#endif
 	
 //Checking for the extra zeros in the indexes.
     index_offset_end_null_pos = index_offset_end_pos - 1; //Set the starting search position
@@ -110,10 +123,10 @@ int jamc_preparation(int argc, char *argv[])
 
     if (index_offset_bytes_found) {
             #ifdef _DEBUG
-            printf("Your index offset HEX value is: 0x%lX\n", divided_index_offset_length);
+            printf("Index offset count value is: 0x%lX\n", divided_index_offset_length);
 			#endif
     } else {
-            fprintf(stderr, "Error finding index offset information. Are you using the right file?\n"); //I think you just write a bad code. Sad.
+            fprintf(stderr, "Error finding index offset count value. Are you using the right file?\n"); //I think you just write a bad code. Sad.
             return 1;
     }
 	
@@ -122,9 +135,11 @@ int jamc_preparation(int argc, char *argv[])
     index_cnt_offset_hex_value[1] = (divided_index_offset_length >> 8) & 0xFF;
     index_cnt_offset_hex_value[2] = (divided_index_offset_length >> 16) & 0xFF;
     index_cnt_offset_hex_value[3] = (divided_index_offset_length >> 24) & 0xFF;
+	
     #ifdef _DEBUG
-    printf("Structured index offset HEX value: %02X %02X %02X %02X\n",index_cnt_offset_hex_value[0], index_cnt_offset_hex_value[1], index_cnt_offset_hex_value[2], index_cnt_offset_hex_value[3]);
+    printf("Structured index offset count value in HEX is: %02X %02X %02X %02X\n",index_cnt_offset_hex_value[0], index_cnt_offset_hex_value[1], index_cnt_offset_hex_value[2], index_cnt_offset_hex_value[3]);
 	#endif
+	
 //Search for the hex value in the file.
     fseek(f_in, 0, SEEK_SET);
 	
@@ -142,10 +157,10 @@ int jamc_preparation(int argc, char *argv[])
 	
     if (index_cnt_offset_bytes_found) {
 		    #ifdef _DEBUG
-            printf("Index count value has been found at position: 0x%lX\n", index_cnt_offset);
+            printf("Index offset count value has been found at position: 0x%lX\n", index_cnt_offset);
 			#endif
     } else {
-            fprintf(stderr, "Error finding index information. Are you using the right file?\n"); //I think you just write a bad code. Sad.
+            fprintf(stderr, "Error finding index offset count value. Are you using the right file?\n"); //I think you just write a bad code. Sad.
             return 1;
     }
 	
@@ -172,10 +187,10 @@ int jamc_preparation(int argc, char *argv[])
 	
     if (vert_offset_bytes_found) {
 		    #ifdef _DEBUG
-            printf("Your vertex offset HEX value is: 0x%lX\n", vert_offset);
+            printf("Vertex offset starts in: 0x%lX\n", vert_offset);
 			#endif
     } else {
-            fprintf(stderr, "Error finding vertex bytes. Are you using the right file?\n"); //I think you just write a bad code. Sad.
+            fprintf(stderr, "Error finding offset start. Are you using the right file?\n"); //I think you just write a bad code. Sad.
             return 1;
     }
 	
@@ -183,34 +198,39 @@ int jamc_preparation(int argc, char *argv[])
     vert_cnt_offset = index_cnt_offset - 4; //Vertexes are always behind indexes. That's all the magic
 	
 	#ifdef _DEBUG
-    printf("Vertex count value has been found at position: 0x%lX\n", vert_cnt_offset);
+    printf("Vertex offset count value has been found at position: 0x%lX\n", vert_cnt_offset);
 	#endif
 //========================Checking the model for bones=========================
 
     #ifdef _DEBUG
-	total_null_count = vert_offset + 32; // 20 - совокупность байтов координат,нормалей и uv координат.
-    printf("Counter start: 0x%lX\n", total_null_count);
+	total_null_count = vert_offset + 32; // 32 - a set of bytes of coordinates, normals and uv coordinates.
+    printf("Ragdoll counter start: 0x%lX\n", total_null_count);
 	#endif
 	
     fseek(f_in, vert_offset + 32, SEEK_SET); // 32 - a set of bytes of coordinates, normals and uv coordinates.
-    fread(vertex_offset_bones_check_bytes, 1, 32, f_in); //In theory, 32 bytes should be checked here but not 20, I have problems with this.
+    fread(vertex_offset_bones_check_bytes, 1, 32, f_in); //Next 32 bytes should be checked here.
 
     for (i = 0; i < 32; i++) {
         if (vertex_offset_bones_check_bytes[i] == 0x00) { //Counting nulls.
             vertex_offset_bones_null_count++;
-			printf("CC0: 0x%lX\n", vertex_offset_bones_null_count);
+			#ifdef _DEBUG	
+			printf("Ragdoll counted zero: 0x%lX\n", vertex_offset_bones_null_count);
+			#endif
         }
     }
 	if (vertex_offset_bones_null_count >= 16) {
-		    printf("CC2: 0x%lX\n", vertex_offset_bones_null_count);
 		    #ifdef _DEBUG	
+			printf("Ragdoll total zeros: 0x%lX\n", vertex_offset_bones_null_count);
 			printf("Ragdoll has been detected\n");
 			#endif
 			return jamc_ragdoll_convertation(argc, argv);
     } else {
+		    #ifdef _DEBUG
+		    printf("Ragdoll not detected\n");
+			#endif
 			return jamc_prop_convertation(argc, argv);
     }
-	fprintf(stderr, "Error counting zeros. Are you using the right file?\n");
+	fprintf(stderr, "Unexpected ending. Are you using the right file?\n");
 	return 1;
 }
 
