@@ -9,18 +9,18 @@ int jamc_finalization(int argc, char *argv[]);
 // STRUCTURIZING
 //=============================================================================
 
-    extern int index_offset_bytes_found;
+    extern int index_offset_start_bytes_found;
     extern int index_cnt_offset_bytes_found;
-    extern int vert_offset_bytes_found;
+    extern int vert_offset_start_bytes_found;
     extern size_t index_offset;
     extern size_t index_cnt_offset;
     extern size_t vert_offset;
     extern size_t vert_cnt_offset;
 
-    extern unsigned char index_offset_bytes[8];
+    extern unsigned char index_offset_start_bytes[8];
     extern unsigned char index_cnt_offset_bytes[4];
     extern unsigned char index_cnt_offset_hex_value[4];
-    extern unsigned char vert_offset_bytes[8];
+    extern unsigned char vert_offset_start_bytes[8];
 
     extern size_t index_offset_end_pos;
     extern size_t index_offset_start_pos;

@@ -11,70 +11,87 @@
 #include "level.h"
 
 //=============================================================================
+// STRUCTURIZING
+//=============================================================================
+
+    size_t index_end_offset = 0;
+	size_t index_start_offset = 0;
+	
+	//int index_level_offset_start_bytes_found = 0;
+    //unsigned char index_level_offset_start_bytes[16];
+
+    int index_offset_end_bytes_found = 0;
+    unsigned char index_offset_end_bytes[8];
+
+//=============================================================================
 // LEVEL PROCESSING
 //=============================================================================
 int jamc_level_preparation(int argc, char *argv[])	
 {
 	fseek(f_in, 0, SEEK_SET);
 	
-	while (fread(index_offset_bytes, 1, 8, f_in) == 8) { //Finding beginning of faces by pattern.
-        if (index_offset_bytes[0] == 0x00 &&
-            index_offset_bytes[1] == 0x00 &&
-            index_offset_bytes[2] == 0x01 &&
-            index_offset_bytes[3] == 0x00 &&
-            index_offset_bytes[4] >  0x00 &&
-            index_offset_bytes[5] == 0x00 &&
-            index_offset_bytes[6] >  0x00 &&
-            index_offset_bytes[7] == 0x00) {
-            index_offset_bytes_found = 1;
+	while (fread(index_offset_start_bytes, 1, 8, f_in) == 8) { //Finding beginning of faces by pattern.
+        if (index_offset_start_bytes[0] == 0x00 &&
+            index_offset_start_bytes[1] == 0x00 &&
+            index_offset_start_bytes[2] == 0x01 &&
+            index_offset_start_bytes[3] == 0x00 &&
+            index_offset_start_bytes[4] >  0x00 &&
+            index_offset_start_bytes[5] == 0x00 &&
+            index_offset_start_bytes[6] >  0x00 &&
+            index_offset_start_bytes[7] == 0x00) {
+            index_offset_start_bytes_found = 1;
             break;
         }
-        fseek(f_in, -7, SEEK_CUR); //Back to the beginning.
-        index_offset++;
     }
 	
-	if (index_offset_bytes_found) {
+	if (index_offset_start_bytes_found) {
+		    index_start_offset = ftell(f_in); //Applying current position.
+
+            index_offset_start_pos = index_start_offset - 8; //End of the line.
+			
+			index_offset = index_offset_start_pos; //Start of indexes.
+		
             #ifdef _DEBUG
-            printf("Index offset starts in: 0x%lX\n", index_offset_bytes);
+            printf("Index offset starts in: 0x%lX\n", index_offset_start_pos);
 			#endif
     } else {
             fprintf(stderr, "Error finding index offset start. Are you using the right file?\n"); //I think you just write a bad code. Sad.
             return 1;
     }
-
-    index_offset_start_pos = index_offset + 20; //Hacky hack! I dont know how it works, but, it actually works!
 	
-    fseek(f_in, 0, SEEK_END);
-    index_offset_end_pos = ftell(f_in);
-	
-    #ifdef _DEBUG
-    printf("Index offset ends in: 0x%lX\n", index_offset_end_pos);
-	#endif
-	
-//Checking for the extra zeros in the indexes.
-    index_offset_end_null_pos = index_offset_end_pos - 1; //Set the starting search position
-	
-    while (index_offset_end_null_pos >= 0){
-        fseek(f_in, index_offset_end_null_pos, SEEK_SET); //Some models use a lot of extra zeros at the end of indexes. So let's see if there are any extra zeros
-        index_offset_end_pos_null_counter_vault = fgetc(f_in);
-        if (index_offset_end_pos_null_counter_vault == 0x00) {
-            index_offset_end_pos_null_counter++;
-            index_offset_end_null_pos--;
-        }   else {
+	while (fread(index_offset_end_bytes, 1, 8, f_in) == 8) { //Finding beginning of faces by pattern.
+        if (index_offset_end_bytes[0] > 0x05 &&
+            index_offset_end_bytes[1] > 0x05 &&
+            index_offset_end_bytes[2] > 0x05 &&
+            index_offset_end_bytes[3] > 0x05 &&
+            index_offset_end_bytes[4] > 0x05 &&
+            index_offset_end_bytes[5] > 0x05 &&
+            index_offset_end_bytes[6] > 0x05 &&
+            index_offset_end_bytes[7] > 0x05) {
+            index_offset_end_bytes_found = 1;
             break;
         }
     }
+	
+	if (index_offset_start_bytes_found) {
+		    index_end_offset = ftell(f_in); //Applying current position.
 
-    if (index_offset_end_pos_null_counter > 1) {
-        index_offset_end_pos -= (index_offset_end_pos_null_counter - 1); //Rewrite extra zeros
+            index_offset_end_pos = index_end_offset - 21; //End of the line.
+		
+            #ifdef _DEBUG
+            printf("Index offset ends in: 0x%lX\n", index_offset_end_pos);
+			#endif
+    } else {
+            fprintf(stderr, "Error finding index offset end. Are you using the right file?\n"); //I think you just write a bad code. Sad.
+            return 1;
     }
 
 //Everything seems fine. Let's continue working with indexes.
-    index_offset_length = index_offset_end_pos - index_offset_start_pos + 20; // Why 20 ? I don't know how it happened.
+    index_offset_length = index_offset_end_pos - index_offset_start_pos + 1;
 
     divided_index_offset_length = index_offset_length / 2; //Divide our value to obtain information.
 
-    if (index_offset_bytes_found) {
+    if (index_offset_start_bytes_found) {
             #ifdef _DEBUG
             printf("Index offset count value is: 0x%lX\n", divided_index_offset_length);
 			#endif
@@ -119,36 +136,19 @@ int jamc_level_preparation(int argc, char *argv[])
 	
 //========================Now let's prepare the vertexes========================
 
-    fseek(f_in, 0, SEEK_SET);
-
-    while (fread(vert_offset_bytes, 1, 8, f_in) == 8) { //Finding beginning of vertices by pattern.
-        if (vert_offset_bytes[0] == 0x00 &&
-            vert_offset_bytes[1] > 0x00 &&
-            vert_offset_bytes[2] > 0x00 &&
-			vert_offset_bytes[3] > 0x00 &&
-            vert_offset_bytes[4] > 0x00 &&
-			vert_offset_bytes[5] > 0x00 &&
-            vert_offset_bytes[6] > 0x00 &&
-            vert_offset_bytes[7] > 0x00) {
-            vert_offset_bytes_found = 1;
-            vert_offset += 1;
-            break;
-        }
-        fseek(f_in, -7, SEEK_CUR); //Back to the beginning.
-        vert_offset++;
-    }
-	
-    if (vert_offset_bytes_found) {
-		    #ifdef _DEBUG
-            printf("Vertex offset starts in: 0x%lX\n", vert_offset);
-			#endif
-    } else {
-            fprintf(stderr, "Error finding offset start. Are you using the right file?\n"); //I think you just write a bad code. Sad.
-            return 1;
-    }
-	
-//Finding of the number of vertices.	
+    //Finding of the number of vertices.	
     vert_cnt_offset = index_cnt_offset - 4; //Vertexes are always behind indexes. That's all the magic
+	
+	#ifdef _DEBUG
+    printf("Vertex offset count value has been found at position: 0x%lX\n", vert_cnt_offset);
+    #endif
+	
+	//Finding of the offset of vertices.	
+	vert_offset = index_cnt_offset + 4; //Vertexes offset are always behind index cnt. That's all the magic
+
+	#ifdef _DEBUG
+    printf("Vertex offset starts in: 0x%lX\n", vert_offset);
+    #endif
 	
    return jamc_level_convertation(argc, argv);
 }
