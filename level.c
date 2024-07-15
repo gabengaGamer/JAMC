@@ -30,7 +30,7 @@ int jamc_level_preparation(int argc, char *argv[])
 {
 	fseek(f_in, 0, SEEK_SET);
 	
-	fprintf(stderr, "Level conversion may take a long time, stay on the line...\n", argv[0]);
+	//fprintf(stderr, "Level preparation may take a long time, stay on the line...\n", argv[0]);
 	
 	while (1) {
 	
@@ -192,8 +192,10 @@ int jamc_level_convertation(int argc, char *argv[])
     int voffs = 1;
     unsigned short *pi;
     unsigned short v1, v2, v3;
+	
+	int mesh_cnt = 0;
 
-    fprintf(stderr, "Converting...\n", argv[0]);
+    fprintf(stderr, "Level conversion can take from 1 to 5 minutes, stay on the line...\n", argv[0]);
 
 	fseek(f_in, vert_cnt_offset, SEEK_SET); //Setting vertex count.
 	fread(&vert_cnt, 1, sizeof(vert_cnt), f_in);
@@ -201,6 +203,10 @@ int jamc_level_convertation(int argc, char *argv[])
 	fseek(f_in, vert_offset, SEEK_SET); //Setting vertex reading position.
     verts = (struct MYLEVELVERTEX *)malloc(sizeof(struct MYLEVELVERTEX) * vert_cnt);
 	fread(verts, 1, sizeof(struct MYLEVELVERTEX)*vert_cnt, f_in);
+	
+	fprintf(f_out, "g mesh_%d\n", mesh_cnt); //Separating geometry.
+    fprintf(f_out, "o mesh_%d\n", mesh_cnt);
+    mesh_cnt++;
 	
 	for(i = 0; i < vert_cnt; i++) {
 		verts[i].pos[0] = -verts[i].pos[0]; //Inverting vertices in X axis.
