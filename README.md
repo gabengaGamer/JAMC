@@ -20,5 +20,5 @@ To compile the code use: ```Visual Studio .Net 2003``` or ```Dev-C++```
 At this moment, only as mesh, without bones.
 ### Level model example:
 ![blender_6qRRxAS1F1](https://github.com/user-attachments/assets/13e5da31-0d4a-4fc0-b71e-6a30d8ff0356)
-Levels can currently be converted only in parts, manually in some cases. Converting levels has a side effect in the form of extra faces. This is an experimental feature at the moment, so I have not compiled experimental updates for the public.
+Converting levels has a side effect in the form of extra faces. This is an experimental feature at the moment, so I have not compiled experimental updates for the public.
 
