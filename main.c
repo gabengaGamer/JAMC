@@ -77,8 +77,9 @@ int jamc_preparation(int argc, char *argv[])
             index_offset_start_bytes[5] == 0x00 &&
             index_offset_start_bytes[6] >  0x00 &&
             index_offset_start_bytes[7] == 0x00) {
-            index_offset_number++;
+            index_offset_number++;	
         }
+		fseek(f_in, -7, SEEK_CUR); //For a more accurate check.
     }
 	
 	#ifdef _DEBUG
@@ -112,7 +113,7 @@ int jamc_preparation(int argc, char *argv[])
             index_offset_start_bytes_found = 1;
             break;
         }
-        fseek(f_in, -7, SEEK_CUR); //Back to the beginning.
+        fseek(f_in, -7, SEEK_CUR); //For a more accurate check.
         index_offset++;
     }
 	
@@ -187,7 +188,7 @@ int jamc_preparation(int argc, char *argv[])
             index_cnt_offset_bytes_found = 1;
             break;
         }
-        fseek(f_in, -3, SEEK_CUR); //Back to the beginning.
+        fseek(f_in, -3, SEEK_CUR); //For a more accurate check.
 		index_cnt_offset++;
     }
 	
@@ -217,7 +218,7 @@ int jamc_preparation(int argc, char *argv[])
             vert_offset += 1;
             break;
         }
-        fseek(f_in, -7, SEEK_CUR); //Back to the beginning.
+        fseek(f_in, -7, SEEK_CUR); //For a more accurate check.
         vert_offset++;
     }
 	
@@ -266,7 +267,7 @@ int jamc_preparation(int argc, char *argv[])
 			#endif
 			return jamc_prop_convertation(argc, argv);
     }
-	fprintf(stderr, "Unexpected ending. Are you using the right file?\n");
+	fprintf(stderr, "Unexpected ending.\n");
 	return 1;
 }
 

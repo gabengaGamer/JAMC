@@ -22,7 +22,7 @@
 
     int index_offset_end_bytes_found = 0;
     unsigned char index_offset_end_bytes[8];
-
+	
 //=============================================================================
 // LEVEL PROCESSING
 //=============================================================================
@@ -30,18 +30,30 @@ int jamc_level_preparation(int argc, char *argv[])
 {
 	fseek(f_in, 0, SEEK_SET);
 	
-	while (fread(index_offset_start_bytes, 1, 8, f_in) == 8) { //Finding beginning of faces by pattern.
+	fprintf(stderr, "Level conversion may take a long time, stay on the line...\n", argv[0]);
+	
+	while (1) {
+	
+    //Reset the values ​​after each run.	
+	index_offset_start_bytes_found = 0;
+    index_offset_end_bytes_found = 0;
+	index_cnt_offset = 0;
+	memset(index_offset_start_bytes, 0, sizeof(index_offset_start_bytes));
+    memset(index_offset_end_bytes, 0, sizeof(index_offset_end_bytes));
+
+	while (fread(index_offset_start_bytes, 1, 8, f_in) == 8) { //Finding start of faces by pattern.
         if (index_offset_start_bytes[0] == 0x00 &&
             index_offset_start_bytes[1] == 0x00 &&
             index_offset_start_bytes[2] == 0x01 &&
             index_offset_start_bytes[3] == 0x00 &&
-            index_offset_start_bytes[4] >  0x00 &&
+            index_offset_start_bytes[4] >= 0x01 &&
             index_offset_start_bytes[5] == 0x00 &&
-            index_offset_start_bytes[6] >  0x00 &&
+            index_offset_start_bytes[6] >= 0x01 &&
             index_offset_start_bytes[7] == 0x00) {
             index_offset_start_bytes_found = 1;
             break;
         }
+		fseek(f_in, -7, SEEK_CUR); //For a more accurate check.
     }
 	
 	if (index_offset_start_bytes_found) {
@@ -59,24 +71,25 @@ int jamc_level_preparation(int argc, char *argv[])
             return 1;
     }
 	
-	while (fread(index_offset_end_bytes, 1, 8, f_in) == 8) { //Finding beginning of faces by pattern.
-        if (index_offset_end_bytes[0] > 0x05 &&
-            index_offset_end_bytes[1] > 0x05 &&
-            index_offset_end_bytes[2] > 0x05 &&
-            index_offset_end_bytes[3] > 0x05 &&
-            index_offset_end_bytes[4] > 0x05 &&
-            index_offset_end_bytes[5] > 0x05 &&
-            index_offset_end_bytes[6] > 0x05 &&
-            index_offset_end_bytes[7] > 0x05) {
+	while (fread(index_offset_end_bytes, 1, 8, f_in) == 8) { //Finding end of faces by pattern.
+        if (index_offset_end_bytes[0] >= 0x01 &&
+            index_offset_end_bytes[1] >= 0x00 &&
+            index_offset_end_bytes[2] == 0x00 &&
+            index_offset_end_bytes[3] == 0x00 &&
+            index_offset_end_bytes[4] >= 0x01 &&
+            index_offset_end_bytes[5] >= 0x00 &&
+            index_offset_end_bytes[6] == 0x00 &&
+            index_offset_end_bytes[7] == 0x00) {
             index_offset_end_bytes_found = 1;
             break;
         }
+		fseek(f_in, -7, SEEK_CUR); //For a more accurate check.
     }
 	
 	if (index_offset_start_bytes_found) {
 		    index_end_offset = ftell(f_in); //Applying current position.
 
-            index_offset_end_pos = index_end_offset - 21; //End of the line.
+            index_offset_end_pos = index_end_offset - 9; //End of the line.
 		
             #ifdef _DEBUG
             printf("Index offset ends in: 0x%lX\n", index_offset_end_pos);
@@ -121,7 +134,7 @@ int jamc_level_preparation(int argc, char *argv[])
             index_cnt_offset_bytes_found = 1;
             break;
         }
-        fseek(f_in, -3, SEEK_CUR); //Back to the beginning.
+        fseek(f_in, -3, SEEK_CUR); //For a more accurate check.
 		index_cnt_offset++;
     }
 	
@@ -150,8 +163,19 @@ int jamc_level_preparation(int argc, char *argv[])
     printf("Vertex offset starts in: 0x%lX\n", vert_offset);
     #endif
 	
-   return jamc_level_convertation(argc, argv);
+    if (jamc_level_convertation(argc, argv) != 0) {
+        return 1;
+    }
+        fseek(f_in, index_end_offset, SEEK_SET);
+    }
+
+    return jamc_finalization(argc, argv);
 }
+//=============================================================================
+// STRUCTURIZING
+//=============================================================================
+
+    size_t face_subsequence = 0; 
 
 //=============================================================================
 // CONVERTING
@@ -221,23 +245,23 @@ int jamc_level_convertation(int argc, char *argv[])
 //Flip every second face.
     if((i - 2) % 2)
 	    fprintf(f_out, "f %u/%u/%u %u/%u/%u %u/%u/%u\n",
-        v3+voffs, v3+voffs, v3+voffs, 
-		v2+voffs, v2+voffs, v2+voffs, 
-		v1+voffs, v1+voffs, v1+voffs
+        v3+voffs+face_subsequence, v3+voffs+face_subsequence, v3+voffs+face_subsequence, 
+        v2+voffs+face_subsequence, v2+voffs+face_subsequence, v2+voffs+face_subsequence, 
+        v1+voffs+face_subsequence, v1+voffs+face_subsequence, v1+voffs+face_subsequence
 	    );
     else
 	    fprintf(f_out, "f %u/%u/%u %u/%u/%u %u/%u/%u\n",
-        v1+voffs, v1+voffs, v1+voffs, 
-		v2+voffs, v2+voffs, v2+voffs, 
-		v3+voffs, v3+voffs, v3+voffs
+        v1+voffs+face_subsequence, v1+voffs+face_subsequence, v1+voffs+face_subsequence, 
+        v2+voffs+face_subsequence, v2+voffs+face_subsequence, v2+voffs+face_subsequence, 
+        v3+voffs+face_subsequence, v3+voffs+face_subsequence, v3+voffs+face_subsequence
 	    );
 
     next_face:
     v1 = v2;
     v2 = v3;
 }
+    face_subsequence += vert_cnt;
     free(verts);
-	free(indices);
-	
-    return jamc_finalization(argc, argv);
-}
+    free(indices);
+    return 0;
+}	
