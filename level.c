@@ -193,7 +193,7 @@ int jamc_level_convertation(int argc, char *argv[])
     unsigned short *pi;
     unsigned short v1, v2, v3;
 	
-	int mesh_cnt = 0;
+	static int mesh_cnt = 0;
 
     fprintf(stderr, "Level conversion can take from 1 to 5 minutes, stay on the line...\n", argv[0]);
 
@@ -218,12 +218,11 @@ int jamc_level_convertation(int argc, char *argv[])
 		verts[i].normal[1] = -verts[i].normal[1]; //Inverting Z axis normals to sync changes with vertices.
 		fprintf(f_out, "vn %f %f %f\n", verts[i].normal[0], verts[i].normal[1], verts[i].normal[2]); 
 	}
-	/*
+	
 	for(i = 0; i < vert_cnt; i++) {
 		verts[i].tc[1] = 1.0f -verts[i].tc[1]; //Inverting UV to sync with texture maps.
 		fprintf(f_out, "vt %f %f\n", verts[i].tc[0], verts[i].tc[1]); 
 	}
-	*/
 
 	fseek(f_in, index_cnt_offset, SEEK_SET); //Setting faces count.
 	fread(&index_cnt, 1, sizeof(index_cnt), f_in);

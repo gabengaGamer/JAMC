@@ -9,8 +9,8 @@ struct MYLEVELVERTEX
 {
     float pos[3];
     float normal[3];
-    //float tc[3];
-	float model_pos[3]; //Most likely, the coordinates of the model’s location in the world are stored here.
+	float unknown[1]; //I dont know what is it.
+    float tc[2];
 };
 
 #endif // LEVEL_H
