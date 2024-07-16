@@ -7,7 +7,7 @@ Name           | Compiled
 ---------------| ----------------------
 Props          | Yes
 Ragdolls       | Yes
-Levels         | Partly
+Levels         | Yes/Experimental realization.
 ## Building Code
 To compile the code use: ```Visual Studio .Net 2003``` or ```Dev-C++```
 ## Examples of converted models
