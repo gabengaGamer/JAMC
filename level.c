@@ -16,9 +16,6 @@
 
     size_t index_end_offset = 0;
 	size_t index_start_offset = 0;
-	
-	//int index_level_offset_start_bytes_found = 0;
-    //unsigned char index_level_offset_start_bytes[16];
 
     int index_offset_end_bytes_found = 0;
     unsigned char index_offset_end_bytes[8];
@@ -124,9 +121,11 @@ int jamc_level_preparation(int argc, char *argv[])
 	#endif
 	
 //Search for the hex value in the file.
-    fseek(f_in, 0, SEEK_SET);
+
+    index_cnt_offset = index_end_offset;
 	
     while (fread(index_cnt_offset_bytes, 1, 4, f_in) == 4) {
+		fseek(f_in, index_cnt_offset, SEEK_SET);
         if (index_cnt_offset_bytes[0] == index_cnt_offset_hex_value[0] &&
             index_cnt_offset_bytes[1] == index_cnt_offset_hex_value[1] &&
             index_cnt_offset_bytes[2] == index_cnt_offset_hex_value[2] &&
@@ -134,8 +133,8 @@ int jamc_level_preparation(int argc, char *argv[])
             index_cnt_offset_bytes_found = 1;
             break;
         }
-        fseek(f_in, -3, SEEK_CUR); //For a more accurate check.
-		index_cnt_offset++;
+        fseek(f_in, -1, SEEK_CUR); //For a more accurate check.
+		index_cnt_offset--;
     }
 	
     if (index_cnt_offset_bytes_found) {
@@ -162,6 +161,8 @@ int jamc_level_preparation(int argc, char *argv[])
 	#ifdef _DEBUG
     printf("Vertex offset starts in: 0x%lX\n", vert_offset);
     #endif
+	
+	//return 1;
 	
     if (jamc_level_convertation(argc, argv) != 0) {
         return 1;
