@@ -1,7 +1,30 @@
 #ifndef RAGDOLL_H
 #define RAGDOLL_H
 
+//=============================================================================
+// PROTOTYPING
+//=============================================================================
+
 int jamc_ragdoll_convertation(int argc, char *argv[]);
+
+//=============================================================================
+// EXTERNING
+//=============================================================================
+
+    extern const char *input_file;
+    extern const char *output_file;
+
+    extern FILE *f_in;
+    extern FILE *f_out;
+
+    extern int index_offset;
+    extern int index_cnt_offset;
+    extern int vert_offset;
+    extern int vert_cnt_offset;
+	
+//=============================================================================
+// STRUCTURIZING
+//=============================================================================
 
 struct MYRAGDOLLVERTEX
 {

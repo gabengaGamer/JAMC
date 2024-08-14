@@ -94,5 +94,5 @@ int jamc_ragdoll_convertation(int argc, char *argv[])
     free(verts);
 	free(indices);
 	
-    return jamc_finalization(argc, argv);
+    return FinishProcessing(argc, argv);
 }

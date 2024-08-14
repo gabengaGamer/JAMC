@@ -1,45 +1,34 @@
 #ifndef MAIN_H
 #define MAIN_H
 
-int jamc_preparation(int argc, char *argv[]);
-
-int jamc_finalization(int argc, char *argv[]);
-
 //=============================================================================
-// STRUCTURIZING
+// PROTOTYPING
 //=============================================================================
 
-    extern int index_offset_start_bytes_found;
-    extern int index_cnt_offset_bytes_found;
-    extern int vert_offset_start_bytes_found;
-    extern size_t index_offset;
-    extern size_t index_cnt_offset;
-    extern size_t vert_offset;
-    extern size_t vert_cnt_offset;
+void GetAssetType(int argc, char *argv[]);
 
-    extern unsigned char index_offset_start_bytes[8];
-    extern unsigned char index_cnt_offset_bytes[4];
-    extern unsigned char index_cnt_offset_hex_value[4];
-    extern unsigned char vert_offset_start_bytes[8];
+//=============================================================================
 
-    extern size_t index_offset_end_pos;
-    extern size_t index_offset_start_pos;
-    extern size_t index_offset_length;
-    extern size_t divided_index_offset_length;
+void GetIndexOffset(int argc, char *argv[]);
 
-    extern int index_offset_end_pos_null_counter;
-    extern int index_offset_end_pos_null_counter_vault;
-    extern size_t index_offset_end_null_pos;
+//=============================================================================
 
-    extern int vertex_offset_bones_null_count;
-    extern unsigned char vertex_offset_bones_check_bytes[32];
+void GetIndexCount(int argc, char *argv[]);
 
-    extern const char *input_file;
-    extern const char *output_file;
+//=============================================================================
 
-    extern FILE *f_in;
-    extern FILE *f_out;
+void GetVertexOffset(int argc, char *argv[]);
 
-    extern int total_null_count;
+//=============================================================================
+
+void GetVertexCount(int argc, char *argv[]);
+
+//=============================================================================
+
+void GetModelType(int argc, char *argv[]);
+
+//=============================================================================
+
+int FinishProcessing(int argc, char *argv[]);
 
 #endif // MAIN_H

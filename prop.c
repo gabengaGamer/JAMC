@@ -94,5 +94,5 @@ int jamc_prop_convertation(int argc, char *argv[])
     free(verts);
 	free(indices);
 	
-    return jamc_finalization(argc, argv);
+    return FinishProcessing(argc, argv);
 }
