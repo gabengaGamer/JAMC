@@ -15,7 +15,7 @@
 #include <string.h>
 #include "main.h"
 #include "prop.h"
-#include "level.h"
+//#include "level.h"
 #include "ragdoll.h"
 
 //=============================================================================
@@ -24,84 +24,83 @@
 
     unsigned i;
 	
-    int index_offset_start_bytes_found = 0;
-    int index_cnt_offset_bytes_found = 0;
-    int vert_offset_start_bytes_found = 0;
-    size_t index_offset = 0;
-    size_t index_cnt_offset = 0;
-    size_t vert_offset = 0;                                  //Fuck!!! There are too many identifiers here. It will be necessary to reduce their number in the future
-    size_t vert_cnt_offset = 0;
-    unsigned char index_offset_start_bytes[8];
-    unsigned char index_cnt_offset_bytes[4];
-    unsigned char index_cnt_offset_hex_value[4];
-    unsigned char vert_offset_start_bytes[8];
-	
-    size_t index_offset_end_pos = 0;
-    size_t index_offset_start_pos = 0;
-    size_t index_offset_length = 0;
-    size_t divided_index_offset_length = 0;
-	
-    int index_offset_end_pos_null_counter = 0;
-    int index_offset_end_pos_null_counter_vault = 0;
-    size_t index_offset_end_null_pos = 0;
-	
-	int vertex_offset_bones_null_count = 0;
-	unsigned char vertex_offset_bones_check_bytes[32];
-	
 	const char *input_file;
     const char *output_file;
 
     FILE *f_in;
     FILE *f_out;
 
-    #ifdef _DEBUG
-    int total_null_count = 0;
-	#endif
+    int index_offset = 0;
+    int index_cnt_offset = 0;
+    int vert_offset = 0;                           
+    int vert_cnt_offset = 0;
 	
-    int index_offset_number = 0; 
-//=============================================================================
-// PREPARATION
-//=============================================================================
-int jamc_preparation(int argc, char *argv[])	
-{
-	fprintf(stderr, "Processing...\n", argv[0]);
-	
-//========================Check if our file is a level=========================	
+	unsigned char index_cnt_offset_hex_value[4];
 
-	while (fread(index_offset_start_bytes, 1, 8, f_in) == 8) { //Count the number of indexes, thus determining whether the model is a level.
-        if (index_offset_start_bytes[0] == 0x00 &&
-            index_offset_start_bytes[1] == 0x00 &&
-            index_offset_start_bytes[2] == 0x01 &&
-            index_offset_start_bytes[3] == 0x00 &&
-            index_offset_start_bytes[4] >  0x00 &&
-            index_offset_start_bytes[5] == 0x00 &&
-            index_offset_start_bytes[6] >  0x00 &&
-            index_offset_start_bytes[7] == 0x00) {
-            index_offset_number++;	
+//=============================================================================
+// ASSET LOADING
+//=============================================================================
+
+void GetAssetType(int argc, char *argv[]) 
+{
+	//Trying to determine the type of asset.
+	
+	unsigned char index_offset_pattern[8];
+	int amount_index_clusters = 0; 
+	
+	while (fread(index_offset_pattern, 1, 8, f_in) == 8) { //Count the number of indexes, thus determining whether the model is a level.
+        if (index_offset_pattern[0] == 0x00 &&
+            index_offset_pattern[1] == 0x00 &&
+            index_offset_pattern[2] == 0x01 &&
+            index_offset_pattern[3] == 0x00 &&
+            index_offset_pattern[4] >  0x00 &&
+            index_offset_pattern[5] == 0x00 &&
+            index_offset_pattern[6] >  0x00 &&
+            index_offset_pattern[7] == 0x00) {
+            amount_index_clusters++;	
         }
 		fseek(f_in, -7, SEEK_CUR); //For a more accurate check.
     }
 	
 	#ifdef _DEBUG
-    printf("Number of indexes in the file: 0x%lX\n", index_offset_number);
+    printf("Debug: Number of index clusters in the file: 0x%lX\n", amount_index_clusters);
 	#endif
 
-	if (index_offset_number > 1) {
+	if (amount_index_clusters > 1) {
 		    #ifdef _DEBUG
-			printf("Level has been detected\n");
+			printf("Debug: Level has been detected\n");
 			#endif
-			return jamc_level_preparation(argc, argv);
+			//jamc_level_preparation(argc, argv);
+			exit(1);
     } else {
 		    #ifdef _DEBUG
-		    printf("Level not detected\n");
+		    printf("Debug: Level not detected\n");
 			#endif
+			GetIndexOffset(argc, argv);
     }
+}
+
+//=============================================================================
+
+void GetIndexOffset(int argc, char *argv[])	
+{	
+    int index_offset_start_bytes_found = 0;
+    unsigned char index_offset_start_bytes[8];
 	
-//==============================Basic processing=================================
+    int index_offset_end_pos = 0;
+    int index_offset_start_pos = 0;
+    int index_offset_length = 0;
+    int divided_index_offset_length = 0;
 	
+    int index_offset_end_pos_null_counter = 0;
+    int index_offset_end_pos_null_counter_vault = 0;
+    int index_offset_end_null_pos = 0;
+
 	fseek(f_in, 0, SEEK_SET);
 	
-	while (fread(index_offset_start_bytes, 1, 8, f_in) == 8) { //Finding beginning of faces by pattern.
+	//Finding beginning of faces by pattern.
+	
+	while (fread(index_offset_start_bytes, 1, 8, f_in) == 8) {
         if (index_offset_start_bytes[0] == 0x00 &&
             index_offset_start_bytes[1] == 0x00 &&
             index_offset_start_bytes[2] == 0x01 &&
@@ -119,23 +118,26 @@ int jamc_preparation(int argc, char *argv[])
 	
 	if (index_offset_start_bytes_found) {
             #ifdef _DEBUG
-            printf("Index offset starts in: 0x%lX\n", index_offset_start_bytes);
+            printf("Debug: Index offset starts in: 0x%lX\n", index_offset_start_bytes);
 			#endif
     } else {
-            fprintf(stderr, "Error finding index offset start. Are you using the right file?\n"); //I think you just write a bad code. Sad.
-            return 1;
+            fprintf(stderr, "Alert: Error finding index offset start. Are you using the right file?\n"); //I think you just write a bad code. Sad.
+            exit(1);
     }
 
     index_offset_start_pos = index_offset + 20; //Hacky hack! I dont know how it works, but, it actually works!
+	
+	//Finding ending of faces.
 	
     fseek(f_in, 0, SEEK_END);
     index_offset_end_pos = ftell(f_in);
 	
     #ifdef _DEBUG
-    printf("Index offset ends in: 0x%lX\n", index_offset_end_pos);
+    printf("Debug: Index offset ends in: 0x%lX\n", index_offset_end_pos);
 	#endif
 	
-//Checking for the extra zeros in the indexes.
+    //Checking for the extra zeros in the indexes.
+	
     index_offset_end_null_pos = index_offset_end_pos - 1; //Set the starting search position
 	
     while (index_offset_end_null_pos >= 0){
@@ -153,68 +155,88 @@ int jamc_preparation(int argc, char *argv[])
         index_offset_end_pos -= (index_offset_end_pos_null_counter - 1); //Rewrite extra zeros
     }
 
-//Everything seems fine. Let's continue working with indexes.
+    //Everything seems fine. Let's continue working with indexes.
+	
     index_offset_length = index_offset_end_pos - index_offset_start_pos + 20; // Why 20 ? I don't know how it happened.
 
     divided_index_offset_length = index_offset_length / 2; //Divide our value to obtain information.
 
     if (index_offset_start_bytes_found) {
             #ifdef _DEBUG
-            printf("Index offset count value is: 0x%lX\n", divided_index_offset_length);
+            printf("Debug: Index offset count value is: 0x%lX\n", divided_index_offset_length);
 			#endif
     } else {
-            fprintf(stderr, "Error finding index offset count value. Are you using the right file?\n"); //I think you just write a bad code. Sad.
-            return 1;
+            fprintf(stderr, "Alert: Error finding index offset count value. Are you using the right file?\n"); //I think you just write a bad code. Sad.
+            exit(1);
     }
 	
-//Let's convert all this crap into a script-readable format.
+    //Let's convert all this crap into a script-readable format.
+	
     index_cnt_offset_hex_value[0] = divided_index_offset_length & 0xFF;
     index_cnt_offset_hex_value[1] = (divided_index_offset_length >> 8) & 0xFF;
     index_cnt_offset_hex_value[2] = (divided_index_offset_length >> 16) & 0xFF;
     index_cnt_offset_hex_value[3] = (divided_index_offset_length >> 24) & 0xFF;
 	
     #ifdef _DEBUG
-    printf("Structured index offset count value in HEX is: %02X %02X %02X %02X\n",index_cnt_offset_hex_value[0], index_cnt_offset_hex_value[1], index_cnt_offset_hex_value[2], index_cnt_offset_hex_value[3]);
+    printf("Debug: Structured index offset count value in HEX is: %02X %02X %02X %02X\n",index_cnt_offset_hex_value[0], index_cnt_offset_hex_value[1], index_cnt_offset_hex_value[2], index_cnt_offset_hex_value[3]);
 	#endif
 	
+	GetIndexCount(argc, argv);
+}
+
+//=============================================================================
+
+void GetIndexCount(int argc, char *argv[])	
+{
 //Search for the hex value in the file.
+
+    unsigned char index_cnt_offset_pattern[4];
+    int index_cnt_offset_found = 0;
+
     fseek(f_in, 0, SEEK_SET);
 	
-    while (fread(index_cnt_offset_bytes, 1, 4, f_in) == 4) {
-        if (index_cnt_offset_bytes[0] == index_cnt_offset_hex_value[0] &&
-            index_cnt_offset_bytes[1] == index_cnt_offset_hex_value[1] &&
-            index_cnt_offset_bytes[2] == index_cnt_offset_hex_value[2] &&
-            index_cnt_offset_bytes[3] == index_cnt_offset_hex_value[3]) {
-            index_cnt_offset_bytes_found = 1;
+    while (fread(index_cnt_offset_pattern, 1, 4, f_in) == 4) {
+        if (index_cnt_offset_pattern[0] == index_cnt_offset_hex_value[0] &&
+            index_cnt_offset_pattern[1] == index_cnt_offset_hex_value[1] &&
+            index_cnt_offset_pattern[2] == index_cnt_offset_hex_value[2] &&
+            index_cnt_offset_pattern[3] == index_cnt_offset_hex_value[3]) {
+            index_cnt_offset_found = 1;
             break;
         }
         fseek(f_in, -3, SEEK_CUR); //For a more accurate check.
 		index_cnt_offset++;
     }
 	
-    if (index_cnt_offset_bytes_found) {
+    if (index_cnt_offset_found) {
 		    #ifdef _DEBUG
-            printf("Index offset count value has been found at position: 0x%lX\n", index_cnt_offset);
+            printf("Debug: Index offset count value has been found at position: 0x%lX\n", index_cnt_offset);
 			#endif
     } else {
-            fprintf(stderr, "Error finding index offset count value. Are you using the right file?\n"); //I think you just write a bad code. Sad.
-            return 1;
+            fprintf(stderr, "Alert: Error finding index offset count value. Are you using the right file?\n"); //I think you just write a bad code. Sad.
+            exit(1);
     }
-	
-//========================Now let's prepare the vertexes========================
+	GetVertexOffset(argc, argv);
+}
 
+//=============================================================================
+
+void GetVertexOffset(int argc, char *argv[])	
+{
+	int vert_offset_found = 0;
+	unsigned char vert_offset_pattern[8];
+	
     fseek(f_in, 0, SEEK_SET);
 
-    while (fread(vert_offset_start_bytes, 1, 8, f_in) == 8) { //Finding beginning of vertices by pattern.
-        if (vert_offset_start_bytes[0] == 0x00 &&
-            vert_offset_start_bytes[1] > 0x00 &&
-            vert_offset_start_bytes[2] > 0x00 &&
-			vert_offset_start_bytes[3] > 0x00 &&
-            vert_offset_start_bytes[4] > 0x00 &&
-			vert_offset_start_bytes[5] > 0x00 &&
-            vert_offset_start_bytes[6] > 0x00 &&
-            vert_offset_start_bytes[7] > 0x00) {
-            vert_offset_start_bytes_found = 1;
+    while (fread(vert_offset_pattern, 1, 8, f_in) == 8) { //Finding beginning of vertices by pattern.
+        if (vert_offset_pattern[0] == 0x00 &&
+            vert_offset_pattern[1] > 0x00 &&
+            vert_offset_pattern[2] > 0x00 &&
+			vert_offset_pattern[3] > 0x00 &&
+            vert_offset_pattern[4] > 0x00 &&
+			vert_offset_pattern[5] > 0x00 &&
+            vert_offset_pattern[6] > 0x00 &&
+            vert_offset_pattern[7] > 0x00) {
+            vert_offset_found = 1;
             vert_offset += 1;
             break;
         }
@@ -222,59 +244,80 @@ int jamc_preparation(int argc, char *argv[])
         vert_offset++;
     }
 	
-    if (vert_offset_start_bytes_found) {
+    if (vert_offset_found) {
 		    #ifdef _DEBUG
-            printf("Vertex offset starts in: 0x%lX\n", vert_offset);
+            printf("Debug: Vertex offset starts in: 0x%lX\n", vert_offset);
 			#endif
     } else {
-            fprintf(stderr, "Error finding offset start. Are you using the right file?\n"); //I think you just write a bad code. Sad.
-            return 1;
+            fprintf(stderr, "Alert: Error finding offset start. Are you using the right file?\n"); //I think you just write a bad code. Sad.
+            exit(1);
     }
-	
-//Finding of the number of vertices.	
+	GetVertexCount(argc, argv);
+}
+
+//=============================================================================
+
+void GetVertexCount(int argc, char *argv[])	
+{
+    //Finding of the number of vertices.	
     vert_cnt_offset = index_cnt_offset - 4; //Vertexes are always behind indexes. That's all the magic
 	
 	#ifdef _DEBUG
-    printf("Vertex offset count value has been found at position: 0x%lX\n", vert_cnt_offset);
+    printf("Debug: Vertex offset count value has been found at position: 0x%lX\n", vert_cnt_offset);
 	#endif
-//========================Checking the model for bones=========================
+	
+	GetModelType(argc, argv);
+}
+
+//=============================================================================
+
+void GetModelType(int argc, char *argv[]) 
+{
+	//Trying to determine the type of model.
+	
+	#ifdef _DEBUG
+    int total_null_count = 0;
+	#endif
+	int bones_null_count = 0;
+	unsigned char bones_null_counter[32];
 
     #ifdef _DEBUG
 	total_null_count = vert_offset + 32; // 32 - a set of bytes of coordinates, normals and uv coordinates.
-    printf("Ragdoll counter start: 0x%lX\n", total_null_count);
+    printf("Debug: Ragdoll counter offset start: 0x%lX\n", total_null_count);
 	#endif
 	
     fseek(f_in, vert_offset + 32, SEEK_SET); // 32 - a set of bytes of coordinates, normals and uv coordinates.
-    fread(vertex_offset_bones_check_bytes, 1, 32, f_in); //Next 32 bytes should be checked here.
+    fread(bones_null_counter, 1, 32, f_in); //Next 32 bytes should be checked here.
 
     for (i = 0; i < 32; i++) {
-        if (vertex_offset_bones_check_bytes[i] == 0x00) { //Counting nulls.
-            vertex_offset_bones_null_count++;
+        if (bones_null_counter[i] == 0x00) { //Counting nulls.
+            bones_null_count++;
 			#ifdef _DEBUG	
-			printf("Ragdoll counted zero: 0x%lX\n", vertex_offset_bones_null_count);
+			printf("Debug: Ragdoll counted zero: 0x%lX\n", bones_null_count);
 			#endif
         }
     }
-	if (vertex_offset_bones_null_count >= 16) {
+	
+	if (bones_null_count >= 16) {
 		    #ifdef _DEBUG	
-			printf("Ragdoll total zeros: 0x%lX\n", vertex_offset_bones_null_count);
-			printf("Ragdoll has been detected\n");
+			printf("Debug: Ragdoll total zeros: 0x%lX\n", bones_null_count);
+			printf("Debug: Ragdoll has been detected\n");
 			#endif
-			return jamc_ragdoll_convertation(argc, argv);
+			jamc_ragdoll_convertation(argc, argv);
     } else {
 		    #ifdef _DEBUG
-		    printf("Ragdoll not detected\n");
+		    printf("Debug: Ragdoll not detected\n");
 			#endif
-			return jamc_prop_convertation(argc, argv);
+			jamc_prop_convertation(argc, argv);
     }
-	fprintf(stderr, "Unexpected ending.\n");
-	return 1;
+	printf("Alert: Unexpected ending. Code: 01\n");
+    exit(1);
 }
 
 //=============================================================================
 // FINALIZING
 //=============================================================================
-int jamc_finalization(int argc, char *argv[])	
+int FinishProcessing(int argc, char *argv[])	
 {
 	fclose(f_in);
 	fclose(f_out);
@@ -299,15 +342,15 @@ int main(int argc, char *argv[])
 
     f_in = fopen(input_file, "rb");
     if (!f_in) {
-        fprintf(stderr, "Error loading input file!\n", argv[0]);
+        fprintf(stderr, "Alert: Error loading input file!\n", argv[0]);
         return 1;
     }
 
     f_out = fopen(output_file, "w");
     if (!f_out) {
-        fprintf(stderr, "Error loading output file!\n", argv[0]);
+        fprintf(stderr, "Alert: Error loading output file!\n", argv[0]);
         fclose(f_in);
         return 1;
     }
-	return jamc_preparation(argc, argv);
+	GetAssetType(argc, argv);
 }
