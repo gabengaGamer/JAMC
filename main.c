@@ -63,7 +63,7 @@ void GetAssetType(int argc, char *argv[])
     }
 	
 	#ifdef _DEBUG
-    printf("Debug: Number of index clusters in the file: 0x%lX\n", amount_index_clusters);
+    printf("Debug: Index clusters count: 0x%lX\n", amount_index_clusters);
 	#endif
 
 	if (amount_index_clusters > 1) {
@@ -83,22 +83,13 @@ void GetAssetType(int argc, char *argv[])
 //=============================================================================
 
 void GetIndexOffset(int argc, char *argv[])	
-{	
-    int index_offset_start_bytes_found = 0;
-    unsigned char index_offset_start_bytes[8];
-	
-    int index_offset_end_pos = 0;
-    int index_offset_start_pos = 0;
-    int index_offset_length = 0;
-    int divided_index_offset_length = 0;
-	
-    int index_offset_end_pos_null_counter = 0;
-    int index_offset_end_pos_null_counter_vault = 0;
-    int index_offset_end_null_pos = 0;
-
+{			
 	fseek(f_in, 0, SEEK_SET);
 	
 	//Finding beginning of faces by pattern.
+	
+	int index_offset_start_bytes_found = 0;
+    unsigned char index_offset_start_bytes[8];
 	
 	while (fread(index_offset_start_bytes, 1, 8, f_in) == 8) {
         if (index_offset_start_bytes[0] == 0x00 &&
@@ -118,30 +109,38 @@ void GetIndexOffset(int argc, char *argv[])
 	
 	if (index_offset_start_bytes_found) {
             #ifdef _DEBUG
-            printf("Debug: Index offset starts in: 0x%lX\n", index_offset_start_bytes);
+            printf("Debug: Index offset starts: 0x%lX\n", index_offset);
 			#endif
     } else {
-            fprintf(stderr, "Alert: Error finding index offset start. Are you using the right file?\n"); //I think you just write a bad code. Sad.
+            fprintf(stderr, "Alert: Error finding index offset start.\n"); //I think you just write a bad code. Sad.
             exit(1);
     }
+	
+	int index_offset_start_pos = 0;
 
     index_offset_start_pos = index_offset + 20; //Hacky hack! I dont know how it works, but, it actually works!
 	
 	//Finding ending of faces.
 	
+	int index_offset_end_pos = 0;
+	int index_offset_end_pos_null_counter = 0;
+    int index_offset_end_pos_null_counter_vault = 0;
+    int index_offset_end_null_pos = 0;
+	
     fseek(f_in, 0, SEEK_END);
     index_offset_end_pos = ftell(f_in);
 	
     #ifdef _DEBUG
-    printf("Debug: Index offset ends in: 0x%lX\n", index_offset_end_pos);
+    printf("Debug: Index offset ends: 0x%lX\n", index_offset_end_pos);
 	#endif
 	
     //Checking for the extra zeros in the indexes.
+	//Some models use a lot of extra zeros at the end of indexes. So let's see if there are any extra zeros.
 	
     index_offset_end_null_pos = index_offset_end_pos - 1; //Set the starting search position
 	
-    while (index_offset_end_null_pos >= 0){
-        fseek(f_in, index_offset_end_null_pos, SEEK_SET); //Some models use a lot of extra zeros at the end of indexes. So let's see if there are any extra zeros
+    while (index_offset_end_null_pos >= 0){ //Processing
+        fseek(f_in, index_offset_end_null_pos, SEEK_SET);
         index_offset_end_pos_null_counter_vault = fgetc(f_in);
         if (index_offset_end_pos_null_counter_vault == 0x00) {
             index_offset_end_pos_null_counter++;
@@ -157,16 +156,19 @@ void GetIndexOffset(int argc, char *argv[])
 
     //Everything seems fine. Let's continue working with indexes.
 	
+	int index_offset_length = 0;
+    int divided_index_offset_length = 0;
+	
     index_offset_length = index_offset_end_pos - index_offset_start_pos + 20; // Why 20 ? I don't know how it happened.
 
     divided_index_offset_length = index_offset_length / 2; //Divide our value to obtain information.
 
     if (index_offset_start_bytes_found) {
             #ifdef _DEBUG
-            printf("Debug: Index offset count value is: 0x%lX\n", divided_index_offset_length);
+            printf("Debug: Index offset length: 0x%lX\n", divided_index_offset_length);
 			#endif
     } else {
-            fprintf(stderr, "Alert: Error finding index offset count value. Are you using the right file?\n"); //I think you just write a bad code. Sad.
+            fprintf(stderr, "Alert: Error finding index offset count value.\n"); //I think you just write a bad code. Sad.
             exit(1);
     }
 	
@@ -178,7 +180,7 @@ void GetIndexOffset(int argc, char *argv[])
     index_cnt_offset_hex_value[3] = (divided_index_offset_length >> 24) & 0xFF;
 	
     #ifdef _DEBUG
-    printf("Debug: Structured index offset count value in HEX is: %02X %02X %02X %02X\n",index_cnt_offset_hex_value[0], index_cnt_offset_hex_value[1], index_cnt_offset_hex_value[2], index_cnt_offset_hex_value[3]);
+    printf("Debug: Structured index offset count value: %02X %02X %02X %02X\n",index_cnt_offset_hex_value[0], index_cnt_offset_hex_value[1], index_cnt_offset_hex_value[2], index_cnt_offset_hex_value[3]);
 	#endif
 	
 	GetIndexCount(argc, argv);
@@ -209,10 +211,10 @@ void GetIndexCount(int argc, char *argv[])
 	
     if (index_cnt_offset_found) {
 		    #ifdef _DEBUG
-            printf("Debug: Index offset count value has been found at position: 0x%lX\n", index_cnt_offset);
+            printf("Debug: Index offset count value starts: 0x%lX\n", index_cnt_offset);
 			#endif
     } else {
-            fprintf(stderr, "Alert: Error finding index offset count value. Are you using the right file?\n"); //I think you just write a bad code. Sad.
+            fprintf(stderr, "Alert: Error finding index offset count value.\n"); //I think you just write a bad code. Sad.
             exit(1);
     }
 	GetVertexOffset(argc, argv);
@@ -246,10 +248,10 @@ void GetVertexOffset(int argc, char *argv[])
 	
     if (vert_offset_found) {
 		    #ifdef _DEBUG
-            printf("Debug: Vertex offset starts in: 0x%lX\n", vert_offset);
+            printf("Debug: Vertex offset starts: 0x%lX\n", vert_offset);
 			#endif
     } else {
-            fprintf(stderr, "Alert: Error finding offset start. Are you using the right file?\n"); //I think you just write a bad code. Sad.
+            fprintf(stderr, "Alert: Error finding offset start.\n"); //I think you just write a bad code. Sad.
             exit(1);
     }
 	GetVertexCount(argc, argv);
@@ -263,7 +265,7 @@ void GetVertexCount(int argc, char *argv[])
     vert_cnt_offset = index_cnt_offset - 4; //Vertexes are always behind indexes. That's all the magic
 	
 	#ifdef _DEBUG
-    printf("Debug: Vertex offset count value has been found at position: 0x%lX\n", vert_cnt_offset);
+    printf("Debug: Vertex offset count value starts: 0x%lX\n", vert_cnt_offset);
 	#endif
 	
 	GetModelType(argc, argv);
@@ -283,7 +285,7 @@ void GetModelType(int argc, char *argv[])
 
     #ifdef _DEBUG
 	total_null_count = vert_offset + 32; // 32 - a set of bytes of coordinates, normals and uv coordinates.
-    printf("Debug: Ragdoll counter offset start: 0x%lX\n", total_null_count);
+    printf("Debug: Ragdoll counter offset starts: 0x%lX\n", total_null_count);
 	#endif
 	
     fseek(f_in, vert_offset + 32, SEEK_SET); // 32 - a set of bytes of coordinates, normals and uv coordinates.
@@ -350,5 +352,7 @@ int main(int argc, char *argv[])
         fclose(f_in);
         return 1;
     }
+	
+	fprintf(stderr, "Reading...\n", argv[0]);
 	GetAssetType(argc, argv);
 }
