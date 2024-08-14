@@ -310,8 +310,6 @@ void GetModelType(int argc, char *argv[])
 			#endif
 			jamc_prop_convertation(argc, argv);
     }
-	printf("Alert: Unexpected ending. Code: 01\n");
-    exit(1);
 }
 
 //=============================================================================
