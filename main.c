@@ -35,7 +35,7 @@
     int vert_offset = 0;                           
     int vert_cnt_offset = 0;
 	
-	unsigned char index_cnt_offset_hex_value[4];
+	unsigned char inverted_index_cnt[4];
 
 //=============================================================================
 // ASSET LOADING
@@ -88,26 +88,26 @@ void GetIndexOffset(int argc, char *argv[])
 	
 	//Finding beginning of faces by pattern.
 	
-	int index_offset_start_bytes_found = 0;
-    unsigned char index_offset_start_bytes[8];
+	int index_offset_pattern_found = 0;
+    unsigned char index_offset_pattern[8];
 	
-	while (fread(index_offset_start_bytes, 1, 8, f_in) == 8) {
-        if (index_offset_start_bytes[0] == 0x00 &&
-            index_offset_start_bytes[1] == 0x00 &&
-            index_offset_start_bytes[2] == 0x01 &&
-            index_offset_start_bytes[3] == 0x00 &&
-            index_offset_start_bytes[4] >  0x00 &&
-            index_offset_start_bytes[5] == 0x00 &&
-            index_offset_start_bytes[6] >  0x00 &&
-            index_offset_start_bytes[7] == 0x00) {
-            index_offset_start_bytes_found = 1;
+	while (fread(index_offset_pattern, 1, 8, f_in) == 8) {
+        if (index_offset_pattern[0] == 0x00 &&
+            index_offset_pattern[1] == 0x00 &&
+            index_offset_pattern[2] == 0x01 &&
+            index_offset_pattern[3] == 0x00 &&
+            index_offset_pattern[4] >  0x00 &&
+            index_offset_pattern[5] == 0x00 &&
+            index_offset_pattern[6] >  0x00 &&
+            index_offset_pattern[7] == 0x00) {
+            index_offset_pattern_found = 1;
             break;
         }
         fseek(f_in, -7, SEEK_CUR); //For a more accurate check.
         index_offset++;
     }
 	
-	if (index_offset_start_bytes_found) {
+	if (index_offset_pattern_found) {
             #ifdef _DEBUG
             printf("Debug: Index offset starts: 0x%lX\n", index_offset);
 			#endif
@@ -116,71 +116,64 @@ void GetIndexOffset(int argc, char *argv[])
             exit(1);
     }
 	
-	int index_offset_start_pos = 0;
+	int index_start_pos;
 
-    index_offset_start_pos = index_offset + 20; //Hacky hack! I dont know how it works, but, it actually works!
+    index_start_pos = index_offset;
 	
 	//Finding ending of faces.
 	
-	int index_offset_end_pos = 0;
-	int index_offset_end_pos_null_counter = 0;
-    int index_offset_end_pos_null_counter_vault = 0;
-    int index_offset_end_null_pos = 0;
+	int index_end_pos;
 	
     fseek(f_in, 0, SEEK_END);
-    index_offset_end_pos = ftell(f_in);
+    index_end_pos = ftell(f_in);
 	
     #ifdef _DEBUG
-    printf("Debug: Index offset ends: 0x%lX\n", index_offset_end_pos);
+    printf("Debug: Index offset ends: 0x%lX\n", index_end_pos);
 	#endif
 	
     //Checking for the extra zeros in the indexes.
 	//Some models use a lot of extra zeros at the end of indexes. So let's see if there are any extra zeros.
 	
-    index_offset_end_null_pos = index_offset_end_pos - 1; //Set the starting search position
+	int index_end_pos_corrected = 0;
+	int index_end_pos_null_counter = 0;
+    int index_end_pos_null_count = 0;
 	
-    while (index_offset_end_null_pos >= 0){ //Processing
-        fseek(f_in, index_offset_end_null_pos, SEEK_SET);
-        index_offset_end_pos_null_counter_vault = fgetc(f_in);
-        if (index_offset_end_pos_null_counter_vault == 0x00) {
-            index_offset_end_pos_null_counter++;
-            index_offset_end_null_pos--;
+    index_end_pos_corrected = index_end_pos - 1; //Set the starting search position
+	
+    while (index_end_pos_corrected >= 0){ //Processing
+        fseek(f_in, index_end_pos_corrected, SEEK_SET);
+        index_end_pos_null_count = fgetc(f_in);
+        if (index_end_pos_null_count == 0x00) {
+            index_end_pos_null_counter++;
+            index_end_pos_corrected--;
         }   else {
             break;
         }
     }
 
-    if (index_offset_end_pos_null_counter > 1) {
-        index_offset_end_pos -= (index_offset_end_pos_null_counter - 1); //Rewrite extra zeros
+    if (index_end_pos_null_counter > 1) {
+        index_end_pos -= (index_end_pos_null_counter - 1); //Rewrite extra zeros
     }
 
     //Everything seems fine. Let's continue working with indexes.
 	
-	int index_offset_length = 0;
-    int divided_index_offset_length = 0;
+	int index_length;
 	
-    index_offset_length = index_offset_end_pos - index_offset_start_pos + 20; // Why 20 ? I don't know how it happened.
+    index_length = (index_end_pos - index_start_pos) / 2; // Calculate the length.
 
-    divided_index_offset_length = index_offset_length / 2; //Divide our value to obtain information.
-
-    if (index_offset_start_bytes_found) {
-            #ifdef _DEBUG
-            printf("Debug: Index offset length: 0x%lX\n", divided_index_offset_length);
-			#endif
-    } else {
-            fprintf(stderr, "Alert: Error finding index offset count value.\n"); //I think you just write a bad code. Sad.
-            exit(1);
-    }
+    #ifdef _DEBUG
+    printf("Debug: Index offset length: 0x%lX\n", index_length);
+	#endif
 	
-    //Let's convert all this crap into a script-readable format.
+    //Let's convert all this crap into a HEX-readable format.
 	
-    index_cnt_offset_hex_value[0] = divided_index_offset_length & 0xFF;
-    index_cnt_offset_hex_value[1] = (divided_index_offset_length >> 8) & 0xFF;
-    index_cnt_offset_hex_value[2] = (divided_index_offset_length >> 16) & 0xFF;
-    index_cnt_offset_hex_value[3] = (divided_index_offset_length >> 24) & 0xFF;
+    inverted_index_cnt[0] =  index_length & 0xFF;
+    inverted_index_cnt[1] = (index_length >> 8) & 0xFF;
+    inverted_index_cnt[2] = (index_length >> 16) & 0xFF;
+    inverted_index_cnt[3] = (index_length >> 24) & 0xFF;
 	
     #ifdef _DEBUG
-    printf("Debug: Structured index offset count value: %02X %02X %02X %02X\n",index_cnt_offset_hex_value[0], index_cnt_offset_hex_value[1], index_cnt_offset_hex_value[2], index_cnt_offset_hex_value[3]);
+    printf("Debug: Structured index offset count value: %02X %02X %02X %02X\n",inverted_index_cnt[0], inverted_index_cnt[1], inverted_index_cnt[2], inverted_index_cnt[3]);
 	#endif
 	
 	GetIndexCount(argc, argv);
@@ -190,7 +183,7 @@ void GetIndexOffset(int argc, char *argv[])
 
 void GetIndexCount(int argc, char *argv[])	
 {
-//Search for the hex value in the file.
+//Search for the original index count in the file.
 
     unsigned char index_cnt_offset_pattern[4];
     int index_cnt_offset_found = 0;
@@ -198,10 +191,10 @@ void GetIndexCount(int argc, char *argv[])
     fseek(f_in, 0, SEEK_SET);
 	
     while (fread(index_cnt_offset_pattern, 1, 4, f_in) == 4) {
-        if (index_cnt_offset_pattern[0] == index_cnt_offset_hex_value[0] &&
-            index_cnt_offset_pattern[1] == index_cnt_offset_hex_value[1] &&
-            index_cnt_offset_pattern[2] == index_cnt_offset_hex_value[2] &&
-            index_cnt_offset_pattern[3] == index_cnt_offset_hex_value[3]) {
+        if (index_cnt_offset_pattern[0] == inverted_index_cnt[0] &&
+            index_cnt_offset_pattern[1] == inverted_index_cnt[1] &&
+            index_cnt_offset_pattern[2] == inverted_index_cnt[2] &&
+            index_cnt_offset_pattern[3] == inverted_index_cnt[3]) {
             index_cnt_offset_found = 1;
             break;
         }
@@ -277,18 +270,17 @@ void GetModelType(int argc, char *argv[])
 {
 	//Trying to determine the type of model.
 	
-	#ifdef _DEBUG
-    int total_null_count = 0;
-	#endif
+    int bones_null_offset = 0;
 	int bones_null_count = 0;
 	unsigned char bones_null_counter[32];
 
-    #ifdef _DEBUG
-	total_null_count = vert_offset + 32; // 32 - a set of bytes of coordinates, normals and uv coordinates.
-    printf("Debug: Ragdoll counter offset starts: 0x%lX\n", total_null_count);
+	bones_null_offset = vert_offset + 32; // 32 - a set of bytes of coordinates, normals and uv coordinates.
+	
+	#ifdef _DEBUG
+    printf("Debug: Ragdoll counter offset starts: 0x%lX\n", bones_null_offset);
 	#endif
 	
-    fseek(f_in, vert_offset + 32, SEEK_SET); // 32 - a set of bytes of coordinates, normals and uv coordinates.
+    fseek(f_in, bones_null_offset, SEEK_SET);
     fread(bones_null_counter, 1, 32, f_in); //Next 32 bytes should be checked here.
 
     for (i = 0; i < 32; i++) {
@@ -322,7 +314,7 @@ int FinishProcessing(int argc, char *argv[])
 	fclose(f_in);
 	fclose(f_out);
 
-	fprintf(stderr, "Conversion complete.\n", argv[0]); //Sexy.
+	fprintf(stderr, "Conversion complete.\n"); //Sexy.
 	
 	return 0;	
 }
