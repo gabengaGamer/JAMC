@@ -5,7 +5,19 @@
 // PROTOTYPING
 //=============================================================================
 
-int jamc_level_preparation(int argc, char *argv[]);
+void GetLVIndexOffset(int argc, char *argv[]);
+
+//=============================================================================
+
+void GetLVIndexCount(int argc, char *argv[]);
+
+//=============================================================================
+
+void GetLVVertexOffset(int argc, char *argv[]);
+
+//=============================================================================
+
+void GetLVVertexCount(int argc, char *argv[]);
 
 //=============================================================================
 
@@ -25,6 +37,10 @@ int jamc_level_convertation(int argc, char *argv[]);
     extern int index_cnt_offset;
     extern int vert_offset;
     extern int vert_cnt_offset;
+	
+	extern int index_length;
+	
+	extern int amount_index_clusters;
 	
 //=============================================================================
 // STRUCTURIZING

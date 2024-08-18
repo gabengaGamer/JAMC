@@ -1,6 +1,6 @@
 //=============================================================================
 //
-//  Program:        JusticeAsuraModelConvertor | J.A.M.C.
+//  Program:        JusticeAsuraModelConverter | J.A.M.C.
 //
 //  Credits:        Modera
 //
@@ -15,7 +15,7 @@
 #include <string.h>
 #include "main.h"
 #include "prop.h"
-//#include "level.h"
+#include "level.h"
 #include "ragdoll.h"
 
 //=============================================================================
@@ -30,12 +30,14 @@
     FILE *f_in;
     FILE *f_out;
 
-    int index_offset = 0;
-    int index_cnt_offset = 0;
-    int vert_offset = 0;                           
-    int vert_cnt_offset = 0;
+    int index_offset;
+    int index_cnt_offset;
+    int vert_offset;                           
+    int vert_cnt_offset;
 	
-	unsigned char inverted_index_cnt[4];
+	int amount_index_clusters; 
+	
+	int index_length;
 
 //=============================================================================
 // ASSET LOADING
@@ -46,7 +48,6 @@ void GetAssetType(int argc, char *argv[])
 	//Trying to determine the type of asset.
 	
 	unsigned char index_offset_pattern[8];
-	int amount_index_clusters = 0; 
 	
 	while (fread(index_offset_pattern, 1, 8, f_in) == 8) { //Count the number of indexes, thus determining whether the model is a level.
         if (index_offset_pattern[0] == 0x00 &&
@@ -70,8 +71,7 @@ void GetAssetType(int argc, char *argv[])
 		    #ifdef _DEBUG
 			printf("Debug: Level has been detected\n");
 			#endif
-			//jamc_level_preparation(argc, argv);
-			exit(1);
+			GetLVIndexOffset(argc, argv);
     } else {
 		    #ifdef _DEBUG
 		    printf("Debug: Level not detected\n");
@@ -112,7 +112,7 @@ void GetIndexOffset(int argc, char *argv[])
             printf("Debug: Index offset starts: 0x%lX\n", index_offset);
 			#endif
     } else {
-            fprintf(stderr, "Alert: Error finding index offset start.\n"); //I think you just write a bad code. Sad.
+            fprintf(stderr, "Alert: Error finding index offset start!\n"); //I think you just write a bad code. Sad.
             exit(1);
     }
 	
@@ -142,22 +142,20 @@ void GetIndexOffset(int argc, char *argv[])
 	
     while (index_end_pos_corrected >= 0){ //Processing
         fseek(f_in, index_end_pos_corrected, SEEK_SET);
-        index_end_pos_null_count = fgetc(f_in);
-        if (index_end_pos_null_count == 0x00) {
-            index_end_pos_null_counter++;
+        index_end_pos_null_counter = fgetc(f_in);
+        if (index_end_pos_null_counter == 0x00) {
+            index_end_pos_null_count++;
             index_end_pos_corrected--;
         }   else {
             break;
         }
     }
 
-    if (index_end_pos_null_counter > 1) {
-        index_end_pos -= (index_end_pos_null_counter - 1); //Rewrite extra zeros
+    if (index_end_pos_null_count > 1) {
+        index_end_pos -= (index_end_pos_null_count - 1); //Rewrite extra zeros
     }
 
     //Everything seems fine. Let's continue working with indexes.
-	
-	int index_length;
 	
     index_length = (index_end_pos - index_start_pos) / 2; // Calculate the length.
 
@@ -165,7 +163,16 @@ void GetIndexOffset(int argc, char *argv[])
     printf("Debug: Index offset length: 0x%lX\n", index_length);
 	#endif
 	
+	GetIndexCount(argc, argv);
+}
+
+//=============================================================================
+
+void GetIndexCount(int argc, char *argv[])	
+{
     //Let's convert all this crap into a HEX-readable format.
+	
+	unsigned char inverted_index_cnt[4];
 	
     inverted_index_cnt[0] =  index_length & 0xFF;
     inverted_index_cnt[1] = (index_length >> 8) & 0xFF;
@@ -176,14 +183,7 @@ void GetIndexOffset(int argc, char *argv[])
     printf("Debug: Structured index offset count value: %02X %02X %02X %02X\n",inverted_index_cnt[0], inverted_index_cnt[1], inverted_index_cnt[2], inverted_index_cnt[3]);
 	#endif
 	
-	GetIndexCount(argc, argv);
-}
-
-//=============================================================================
-
-void GetIndexCount(int argc, char *argv[])	
-{
-//Search for the original index count in the file.
+    //Search for the original index count in the file.
 
     unsigned char index_cnt_offset_pattern[4];
     int index_cnt_offset_found = 0;
@@ -207,7 +207,7 @@ void GetIndexCount(int argc, char *argv[])
             printf("Debug: Index offset count value starts: 0x%lX\n", index_cnt_offset);
 			#endif
     } else {
-            fprintf(stderr, "Alert: Error finding index offset count value.\n"); //I think you just write a bad code. Sad.
+            fprintf(stderr, "Alert: Error finding index offset count value!\n"); //I think you just write a bad code. Sad.
             exit(1);
     }
 	GetVertexOffset(argc, argv);
@@ -244,7 +244,7 @@ void GetVertexOffset(int argc, char *argv[])
             printf("Debug: Vertex offset starts: 0x%lX\n", vert_offset);
 			#endif
     } else {
-            fprintf(stderr, "Alert: Error finding offset start.\n"); //I think you just write a bad code. Sad.
+            fprintf(stderr, "Alert: Error finding vertex offset start!\n"); //I think you just write a bad code. Sad.
             exit(1);
     }
 	GetVertexCount(argc, argv);
