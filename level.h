@@ -37,11 +37,11 @@ int jamc_level_convertation(int argc, char *argv[]);
     extern int index_cnt_offset;
     extern int vert_offset;
     extern int vert_cnt_offset;
-	
-	extern int index_length;
-	
-	extern int amount_index_clusters;
-	
+    
+    extern int index_length;
+    
+    extern int amount_index_clusters;
+    
 //=============================================================================
 // STRUCTURIZING
 //=============================================================================
@@ -50,7 +50,7 @@ struct MYLEVELVERTEX
 {
     float pos[3];
     float normal[3];
-	float unknown[1]; //I dont know what is it.
+    float unknown[1]; //I dont know what is it.
     float tc[2];
 };
 
