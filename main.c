@@ -71,7 +71,8 @@ void GetAssetType(int argc, char *argv[])
             #ifdef _DEBUG
             printf("Debug: Level has been detected\n");
             #endif
-            GetLVIndexOffset(argc, argv);
+            //GetLVIndexOffset(argc, argv);
+			LevelBatchProcess(argc, argv);
     } else {
             #ifdef _DEBUG
             printf("Debug: Level not detected\n");

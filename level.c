@@ -16,16 +16,27 @@
 
     int index_end_pos;
 
-    //int face_subsequence = 0; 
+    int face_subsequence = 0; 
     
 //=============================================================================
 // LEVEL PROCESSING
 //=============================================================================
 
+int LevelBatchProcess(int argc, char *argv[])
+{
+	fseek(f_in, 0, SEEK_SET);
+
+    for (int i = 0; i < amount_index_clusters; i++) {
+		#ifdef _DEBUG
+        printf("Info: Mesh cluster: %d\n", i + 1);
+		#endif
+        GetLVIndexOffset(argc, argv);
+    }
+    return FinishProcessing(argc, argv);
+}
+
 void GetLVIndexOffset(int argc, char *argv[])
 {
-    fseek(f_in, 0, SEEK_SET);
-    
     index_offset = ftell(f_in);
 
     int index_offset_pattern_found;
@@ -65,12 +76,12 @@ void GetLVIndexOffset(int argc, char *argv[])
     index_offset_end_pattern_found = 0; //Reset the value ​​after each run.
     unsigned char index_offset_end_pattern[8];
     
-    while (fread(index_offset_end_pattern, 1, 8, f_in) == 8) { //Finding end of faces by pattern.
-        if (index_offset_end_pattern[0] >= 0x01 &&
-            index_offset_end_pattern[1] >= 0x00 &&
+    while (fread(index_offset_end_pattern, 1, 8, f_in) == 8) { //I'm actually not sure about this pattern.
+        if (index_offset_end_pattern[0] >= 0x01 &&             //There are differences in some places that create problems.  
+            index_offset_end_pattern[1] >= 0x00 &&             //Also, changing the pattern can cause false positives.
             index_offset_end_pattern[2] == 0x00 &&
             index_offset_end_pattern[3] == 0x00 &&
-            index_offset_end_pattern[4] >= 0x01 &&
+            index_offset_end_pattern[4] >= 0x00 && //0x00 or 0x01 ?
             index_offset_end_pattern[5] >= 0x00 &&
             index_offset_end_pattern[6] == 0x00 &&
             index_offset_end_pattern[7] == 0x00) {
@@ -197,10 +208,6 @@ int jamc_level_convertation(int argc, char *argv[])
     unsigned short v1, v2, v3;
     
     static int mesh_cnt = 0;
-    
-    int face_subsequence = 0; 
-
-    fprintf(stderr, "Level conversion can take from 1 to 5 minutes, stay on the line...\n", argv[0]);
 
     fseek(f_in, vert_cnt_offset, SEEK_SET); //Setting vertex count.
     fread(&vert_cnt, 1, sizeof(vert_cnt), f_in);
@@ -275,3 +282,44 @@ int jamc_level_convertation(int argc, char *argv[])
     free(indices);
     return 0;
 }    
+
+
+/* Graveyard aka CODE VAULT
+                                INDEX END PATTERN SEARCHER (OLD)
+
+    while (fread(index_offset_end_pattern, 1, 12, f_in) == 12) { //Finding end of faces by pattern.
+        if (index_offset_end_pattern[0] >= 0x01 &&
+            index_offset_end_pattern[1] >= 0x00 &&
+            index_offset_end_pattern[2] == 0x00 &&
+            index_offset_end_pattern[3] == 0x00 &&
+            index_offset_end_pattern[4] >= 0x01 &&
+            index_offset_end_pattern[5] >= 0x00 &&
+            index_offset_end_pattern[6] == 0x00 &&
+            index_offset_end_pattern[7] >= 0x00 &&
+            index_offset_end_pattern[8] >  0x00 &&
+            index_offset_end_pattern[9] >  0x00 &&
+            index_offset_end_pattern[10] > 0x00 &&
+            index_offset_end_pattern[11] > 0x00){ // Очень спорно, шо пиздец.
+            index_offset_end_pattern_found = 1;
+            break;
+        }
+        fseek(f_in, -11, SEEK_CUR);
+    }
+
+                                INDEX START PATTERN SEARCHER (OLD)
+
+	while (fread(index_offset_start_bytes, 1, 8, f_in) == 8) { //Finding start of faces by pattern.
+        if (index_offset_start_bytes[0] == 0x00 &&
+            index_offset_start_bytes[1] == 0x00 &&
+            index_offset_start_bytes[2] == 0x01 &&
+            index_offset_start_bytes[3] == 0x00 &&
+            index_offset_start_bytes[4] >= 0x01 &&
+            index_offset_start_bytes[5] == 0x00 &&
+            index_offset_start_bytes[6] >= 0x01 &&
+            index_offset_start_bytes[7] == 0x00) {
+            index_offset_start_bytes_found = 1;
+            break;
+        }
+		fseek(f_in, -7, SEEK_CUR); //For a more accurate check.
+    }
+*/
