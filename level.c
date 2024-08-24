@@ -24,12 +24,12 @@
 
 int LevelBatchProcess(int argc, char *argv[])
 {
-	fseek(f_in, 0, SEEK_SET);
+    fseek(f_in, 0, SEEK_SET);
 
     for (int i = 0; i < amount_index_clusters; i++) {
-		#ifdef _DEBUG
+        #ifdef _DEBUG
         printf("Info: Mesh cluster: %d\n", i + 1);
-		#endif
+        #endif
         GetLVIndexOffset(argc, argv);
     }
     return FinishProcessing(argc, argv);
@@ -308,7 +308,7 @@ int jamc_level_convertation(int argc, char *argv[])
 
                                 INDEX START PATTERN SEARCHER (OLD)
 
-	while (fread(index_offset_start_bytes, 1, 8, f_in) == 8) { //Finding start of faces by pattern.
+    while (fread(index_offset_start_bytes, 1, 8, f_in) == 8) { //Finding start of faces by pattern.
         if (index_offset_start_bytes[0] == 0x00 &&
             index_offset_start_bytes[1] == 0x00 &&
             index_offset_start_bytes[2] == 0x01 &&
@@ -320,6 +320,6 @@ int jamc_level_convertation(int argc, char *argv[])
             index_offset_start_bytes_found = 1;
             break;
         }
-		fseek(f_in, -7, SEEK_CUR); //For a more accurate check.
+        fseek(f_in, -7, SEEK_CUR); //For a more accurate check.
     }
 */
