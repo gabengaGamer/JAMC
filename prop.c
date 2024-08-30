@@ -13,7 +13,8 @@
 //=============================================================================
 // CONVERTING
 //=============================================================================
-int jamc_prop_convertation(int argc, char *argv[])
+
+int jamc_prop_convertation()
 {
     unsigned i;
     unsigned vert_cnt;
@@ -26,7 +27,8 @@ int jamc_prop_convertation(int argc, char *argv[])
     unsigned short *pi;
     unsigned short v1, v2, v3;
 
-    fprintf(stderr, "Converting...\n", argv[0]);
+    //ReadingAnimation();
+    fprintf(stderr, "Converting...\n");
 
     fseek(f_in, vert_cnt_offset, SEEK_SET); //Setting vertex count.
     fread(&vert_cnt, 1, sizeof(vert_cnt), f_in);
@@ -94,5 +96,5 @@ int jamc_prop_convertation(int argc, char *argv[])
     free(verts);
     free(indices);
     
-    return FinishProcessing(argc, argv);
+    return FinishProcessing();
 }

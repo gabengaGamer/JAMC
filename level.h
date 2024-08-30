@@ -1,31 +1,33 @@
 #ifndef LEVEL_H
 #define LEVEL_H
 
+#define CLUSTER_TIMEOUT 10 //Time (in seconds) allocated to process each mesh cluster.
+
 //=============================================================================
 // PROTOTYPING
 //=============================================================================
 
-int LevelBatchProcess(int argc, char *argv[]);
+int LevelBatchProcess();
 
 //=============================================================================
 
-void GetLVIndexOffset(int argc, char *argv[]);
+void GetLVIndexOffset();
 
 //=============================================================================
 
-void GetLVIndexCount(int argc, char *argv[]);
+void GetLVIndexCount();
 
 //=============================================================================
 
-void GetLVVertexOffset(int argc, char *argv[]);
+void GetLVVertexOffset();
 
 //=============================================================================
 
-void GetLVVertexCount(int argc, char *argv[]);
+void GetLVVertexCount();
 
 //=============================================================================
 
-int jamc_level_convertation(int argc, char *argv[]);
+int jamc_level_convertation();
 
 //=============================================================================
 // EXTERNING

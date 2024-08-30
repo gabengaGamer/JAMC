@@ -5,7 +5,7 @@
 // PROTOTYPING
 //=============================================================================
 
-int jamc_ragdoll_convertation(int argc, char *argv[]);
+int jamc_ragdoll_convertation();
 
 //=============================================================================
 // EXTERNING

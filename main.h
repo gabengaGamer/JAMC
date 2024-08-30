@@ -5,30 +5,36 @@
 // PROTOTYPING
 //=============================================================================
 
-void GetAssetType(int argc, char *argv[]);
+void GetAssetType();
 
 //=============================================================================
 
-void GetIndexOffset(int argc, char *argv[]);
+void GetIndexOffset();
 
 //=============================================================================
 
-void GetIndexCount(int argc, char *argv[]);
+void GetIndexCount();
 
 //=============================================================================
 
-void GetVertexOffset(int argc, char *argv[]);
+void GetVertexOffset();
 
 //=============================================================================
 
-void GetVertexCount(int argc, char *argv[]);
+void GetVertexCount();
 
 //=============================================================================
 
-void GetModelType(int argc, char *argv[]);
+void GetModelType();
 
 //=============================================================================
 
-int FinishProcessing(int argc, char *argv[]);
+void ReadingAnimation();
+
+//=============================================================================
+
+int FinishProcessing();
+
+//=============================================================================
 
 #endif // MAIN_H

@@ -7,6 +7,7 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
+#include <time.h>
 #include "main.h"
 #include "level.h"
 
@@ -22,20 +23,30 @@
 // LEVEL PROCESSING
 //=============================================================================
 
-int LevelBatchProcess(int argc, char *argv[])
+int LevelBatchProcess()
 {
     fseek(f_in, 0, SEEK_SET);
 
     for (int i = 0; i < amount_index_clusters; i++) {
+        
+        time_t StopWatch = time(NULL);    
+        
         #ifdef _DEBUG
         printf("Info: Mesh cluster: %d\n", i + 1);
         #endif
-        GetLVIndexOffset(argc, argv);
+        GetLVIndexOffset();
+    
+        if (difftime(time(NULL), StopWatch) > CLUSTER_TIMEOUT) {
+            fprintf(stderr, "Alert: Cluster conversion time out!\n"); //Hacky protection against memory leaks.
+            return FinishProcessing();
+        }    
     }
-    return FinishProcessing(argc, argv);
+    return FinishProcessing();
 }
 
-void GetLVIndexOffset(int argc, char *argv[])
+//=============================================================================
+
+void GetLVIndexOffset()
 {
     index_offset = ftell(f_in);
 
@@ -48,9 +59,9 @@ void GetLVIndexOffset(int argc, char *argv[])
             index_offset_pattern[1] == 0x00 &&
             index_offset_pattern[2] == 0x01 &&
             index_offset_pattern[3] == 0x00 &&
-            index_offset_pattern[4] >  0x00 &&
+            index_offset_pattern[4] >= 0x01 &&
             index_offset_pattern[5] == 0x00 &&
-            index_offset_pattern[6] >  0x00 &&
+            index_offset_pattern[6] >= 0x01 &&
             index_offset_pattern[7] == 0x00) {
             index_offset_pattern_found = 1;
             break;
@@ -81,9 +92,9 @@ void GetLVIndexOffset(int argc, char *argv[])
             index_offset_end_pattern[1] >= 0x00 &&             //Also, changing the pattern can cause false positives.
             index_offset_end_pattern[2] == 0x00 &&
             index_offset_end_pattern[3] == 0x00 &&
-            index_offset_end_pattern[4] >= 0x00 && //0x00 or 0x01 ?
-            index_offset_end_pattern[5] >= 0x00 &&
-            index_offset_end_pattern[6] == 0x00 &&
+            index_offset_end_pattern[4] >= 0x01 && //0x00 or 0x01 ?
+            index_offset_end_pattern[5] >= 0x00 && 
+            index_offset_end_pattern[6] == 0x00 && //Okay, i think this bullshit should be reworked.
             index_offset_end_pattern[7] == 0x00) {
             index_offset_end_pattern_found = 1;
             break;
@@ -100,8 +111,20 @@ void GetLVIndexOffset(int argc, char *argv[])
             printf("Debug: Index offset ends: 0x%lX\n", index_end_pos);
             #endif
     } else {
+    if (feof(f_in)) { //Check if we have reached the end of the file, if so, then we set the end of the indices there.
+            fseek(f_in, -1, SEEK_CUR);
+    
+            index_end_pos = ftell(f_in); //Applying current position.
+            
+            //index_end_pos -= 1; //Correcting
+            
+            #ifdef _DEBUG
+            printf("Debug: Index offset ends: 0x%lX\n", index_end_pos);
+            #endif
+    } else {
             fprintf(stderr, "Alert: Error finding index offset end. Are you using the right file?\n"); //I think you just write a bad code. Sad.
             exit(1);
+    }
     }
 
     //Everything seems fine. Let's continue working with indexes.
@@ -111,12 +134,12 @@ void GetLVIndexOffset(int argc, char *argv[])
     printf("Debug: Index offset length: 0x%lX\n", index_length);
     #endif
     
-    GetLVIndexCount(argc, argv);
+    GetLVIndexCount();
 }
 
 //=============================================================================
 
-void GetLVIndexCount(int argc, char *argv[])
+void GetLVIndexCount()
 {
     //Let's convert all this crap into a HEX-readable format.
     
@@ -135,9 +158,9 @@ void GetLVIndexCount(int argc, char *argv[])
 
     unsigned char index_cnt_offset_pattern[4];
     int index_cnt_offset_found = 0;
-    
+   
     index_cnt_offset = index_end_pos;
-    
+
     while (fread(index_cnt_offset_pattern, 1, 4, f_in) == 4) {
         fseek(f_in, index_cnt_offset, SEEK_SET);
         if (index_cnt_offset_pattern[0] == inverted_index_cnt[0] &&
@@ -145,7 +168,7 @@ void GetLVIndexCount(int argc, char *argv[])
             index_cnt_offset_pattern[2] == inverted_index_cnt[2] &&
             index_cnt_offset_pattern[3] == inverted_index_cnt[3]) {
             index_cnt_offset_found = 1;
-            break;
+            break; //Sometimes false positives occur because the number of indices may coincide with the vertex offset bytes.
         }
         fseek(f_in, -1, SEEK_CUR); //For a more accurate check.
         index_cnt_offset--;
@@ -155,31 +178,31 @@ void GetLVIndexCount(int argc, char *argv[])
             #ifdef _DEBUG
             printf("Debug: Index offset count value starts: 0x%lX\n", index_cnt_offset);
             #endif
-    } else {
+    } else { 
             fprintf(stderr, "Alert: Error finding index offset count value!\n"); //I think you just write a bad code. Sad.
             exit(1);
     }
     
-    GetLVVertexOffset(argc, argv);
+    GetLVVertexOffset();
 }
 
 //=============================================================================
 
-void GetLVVertexOffset(int argc, char *argv[])
+void GetLVVertexOffset()
 {
     //Finding of the offset of vertices.    
     vert_offset = index_cnt_offset + 4; //Vertexes offset are always behind index cnt. That's all the magic
 
     #ifdef _DEBUG
-    printf("Vertex offset starts in: 0x%lX\n", vert_offset);
+    printf("Debug: Vertex offset starts in: 0x%lX\n", vert_offset);
     #endif
     
-    GetLVVertexCount(argc, argv);
+    GetLVVertexCount();
 }
 
 //=============================================================================
 
-void GetLVVertexCount(int argc, char *argv[])    
+void GetLVVertexCount()    
 {
     //Finding of the number of vertices.    
     vert_cnt_offset = index_cnt_offset - 4; //Vertexes are always behind indexes. That's all the magic
@@ -188,13 +211,14 @@ void GetLVVertexCount(int argc, char *argv[])
     printf("Debug: Vertex offset count value starts: 0x%lX\n", vert_cnt_offset);
     #endif
     
-    jamc_level_convertation(argc, argv);
+    jamc_level_convertation();
 }
 
 //=============================================================================
 // CONVERTING
 //=============================================================================
-int jamc_level_convertation(int argc, char *argv[])
+
+int jamc_level_convertation()
 {
     unsigned i;
     unsigned vert_cnt;
@@ -207,7 +231,7 @@ int jamc_level_convertation(int argc, char *argv[])
     unsigned short *pi;
     unsigned short v1, v2, v3;
     
-    static int mesh_cnt = 0;
+    static int mesh_cnt;
 
     fseek(f_in, vert_cnt_offset, SEEK_SET); //Setting vertex count.
     fread(&vert_cnt, 1, sizeof(vert_cnt), f_in);

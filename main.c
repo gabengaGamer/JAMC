@@ -13,6 +13,7 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
+#include <windows.h>
 #include "main.h"
 #include "prop.h"
 #include "level.h"
@@ -43,7 +44,7 @@
 // ASSET LOADING
 //=============================================================================
 
-void GetAssetType(int argc, char *argv[]) 
+void GetAssetType() 
 {
     //Trying to determine the type of asset.
     
@@ -71,19 +72,19 @@ void GetAssetType(int argc, char *argv[])
             #ifdef _DEBUG
             printf("Debug: Level has been detected\n");
             #endif
-            //GetLVIndexOffset(argc, argv);
-			LevelBatchProcess(argc, argv);
+            //GetLVIndexOffset();
+            LevelBatchProcess();
     } else {
             #ifdef _DEBUG
             printf("Debug: Level not detected\n");
             #endif
-            GetIndexOffset(argc, argv);
+            GetIndexOffset();
     }
 }
 
 //=============================================================================
 
-void GetIndexOffset(int argc, char *argv[])    
+void GetIndexOffset()    
 {            
     fseek(f_in, 0, SEEK_SET);
     
@@ -166,12 +167,12 @@ void GetIndexOffset(int argc, char *argv[])
     printf("Debug: Index offset length: 0x%lX\n", index_length);
     #endif
     
-    GetIndexCount(argc, argv);
+    GetIndexCount();
 }
 
 //=============================================================================
 
-void GetIndexCount(int argc, char *argv[])    
+void GetIndexCount()    
 {
     //Let's convert all this crap into a HEX-readable format.
     
@@ -215,12 +216,12 @@ void GetIndexCount(int argc, char *argv[])
             fprintf(stderr, "Alert: Error finding index offset count value!\n"); //I think you just write a bad code. Sad.
             exit(1);
     }
-    GetVertexOffset(argc, argv);
+    GetVertexOffset();
 }
 
 //=============================================================================
 
-void GetVertexOffset(int argc, char *argv[])    
+void GetVertexOffset()    
 {
     int vert_offset_found = 0;
     unsigned char vert_offset_pattern[8];
@@ -255,12 +256,12 @@ void GetVertexOffset(int argc, char *argv[])
             fprintf(stderr, "Alert: Error finding vertex offset start!\n"); //I think you just write a bad code. Sad.
             exit(1);
     }
-    GetVertexCount(argc, argv);
+    GetVertexCount();
 }
 
 //=============================================================================
 
-void GetVertexCount(int argc, char *argv[])    
+void GetVertexCount()    
 {
     //Finding of the number of vertices.    
     vert_cnt_offset = index_cnt_offset - 4; //Vertexes are always behind indexes. That's all the magic
@@ -269,12 +270,12 @@ void GetVertexCount(int argc, char *argv[])
     printf("Debug: Vertex offset count value starts: 0x%lX\n", vert_cnt_offset);
     #endif
     
-    GetModelType(argc, argv);
+    GetModelType();
 }
 
 //=============================================================================
 
-void GetModelType(int argc, char *argv[]) 
+void GetModelType() 
 {
     //Trying to determine the type of model.
     
@@ -305,54 +306,72 @@ void GetModelType(int argc, char *argv[])
             printf("Debug: Ragdoll total zeros: 0x%lX\n", bones_null_count);
             printf("Debug: Ragdoll has been detected\n");
             #endif
-            jamc_ragdoll_convertation(argc, argv);
+            jamc_ragdoll_convertation();
     } else {
             #ifdef _DEBUG
             printf("Debug: Ragdoll not detected\n");
             #endif
-            jamc_prop_convertation(argc, argv);
+            jamc_prop_convertation();
     }
 }
 
 //=============================================================================
 // FINALIZING
 //=============================================================================
-int FinishProcessing(int argc, char *argv[])    
+
+int FinishProcessing()    
 {
     fclose(f_in);
     fclose(f_out);
 
-    fprintf(stderr, "Conversion complete.\n"); //Sexy.
+    printf("Conversion complete.\n"); //Sexy.
     
     return 0;    
 }
 
 //=============================================================================
+// READING ANIMATION
+//=============================================================================
+
+void ReadingAnimation() {
+    for (int i = 0; i < 3; i++) {
+        printf("\rReading");
+        for (int j = 0; j <= i; j++) {
+            printf(".");
+        }
+        Sleep(512);
+    }
+    printf("\rReading...\n");
+}
+
+//=============================================================================
 // FILE SYSTEM
 //=============================================================================
-int main(int argc, char *argv[])    
+
+int main(int argc, char *argv[])   
 {
     input_file = argv[1];
     output_file = "output.obj";
 
     if (argc < 2) {
-        fprintf(stderr, "Usage: %s <input_file>\n", argv[0]);
+        printf("Info: Usage: %s <input_file>\n", argv[0]);
         return 1;
     }
 
     f_in = fopen(input_file, "rb");
     if (!f_in) {
-        fprintf(stderr, "Alert: Error loading input file!\n", argv[0]);
+        fprintf(stderr, "Alert: Error loading <%s!\n", argv[1]);
         return 1;
     }
 
     f_out = fopen(output_file, "w");
     if (!f_out) {
-        fprintf(stderr, "Alert: Error loading output file!\n", argv[0]);
+        fprintf(stderr, "Alert: Error loading output file!\n");
         fclose(f_in);
         return 1;
     }
     
-    fprintf(stderr, "Reading...\n", argv[0]);
-    GetAssetType(argc, argv);
+	ReadingAnimation(); //Funne stuff xD.
+    //printf("Reading...\n");
+    GetAssetType();
 }
