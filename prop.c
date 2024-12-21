@@ -6,7 +6,6 @@
 
 #include <stdlib.h>
 #include <stdio.h>
-#include <string.h>
 #include "main.h"
 #include "prop.h"
 
@@ -14,7 +13,7 @@
 // CONVERTING
 //=============================================================================
 
-int jamc_prop_convertation()
+int ProcessPropMesh()
 {
     unsigned i;
     unsigned vert_cnt;
@@ -26,9 +25,6 @@ int jamc_prop_convertation()
     int voffs = 1;
     unsigned short *pi;
     unsigned short v1, v2, v3;
-
-    //ReadingAnimation();
-    fprintf(stderr, "Converting...\n");
 
     fseek(f_in, vert_cnt_offset, SEEK_SET); //Setting vertex count.
     fread(&vert_cnt, 1, sizeof(vert_cnt), f_in);

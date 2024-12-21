@@ -12,8 +12,6 @@
 
 #include <stdlib.h>
 #include <stdio.h>
-#include <string.h>
-#include <windows.h>
 #include "main.h"
 #include "prop.h"
 #include "level.h"
@@ -31,14 +29,13 @@
     FILE *f_in;
     FILE *f_out;
 
+    int index_length;
     int index_offset;
     int index_cnt_offset;
     int vert_offset;                           
     int vert_cnt_offset;
     
-    int amount_index_clusters; 
-    
-    int index_length;
+    int mesh_count;    
 
 //=============================================================================
 // ASSET LOADING
@@ -47,33 +44,21 @@
 void GetAssetType() 
 {
     //Trying to determine the type of asset.
-    
-    unsigned char index_offset_pattern[8];
-    
-    while (fread(index_offset_pattern, 1, 8, f_in) == 8) { //Count the number of indexes, thus determining whether the model is a level.
-        if (index_offset_pattern[0] == 0x00 &&
-            index_offset_pattern[1] == 0x00 &&
-            index_offset_pattern[2] == 0x01 &&
-            index_offset_pattern[3] == 0x00 &&
-            index_offset_pattern[4] >  0x00 &&
-            index_offset_pattern[5] == 0x00 &&
-            index_offset_pattern[6] >  0x00 &&
-            index_offset_pattern[7] == 0x00) {
-            amount_index_clusters++;    
-        }
-        fseek(f_in, -7, SEEK_CUR); //For a more accurate check.
-    }
-    
-    #ifdef _DEBUG
-    printf("Debug: Index clusters count: 0x%lX\n", amount_index_clusters);
-    #endif
+      
+    fseek(f_in, 0, SEEK_SET);
+    fread(&mesh_count, sizeof(int), 1, f_in);    
+    fseek(f_in, 8, SEEK_SET);
+    int mesh_secoundary_count;
+    fread(&mesh_secoundary_count, sizeof(int), 1, f_in);
 
-    if (amount_index_clusters > 1) {
+    if ((mesh_count == mesh_secoundary_count) && (mesh_count < 1024) && (mesh_secoundary_count < 1024)) {
             #ifdef _DEBUG
             printf("Debug: Level has been detected\n");
             #endif
-            //GetLVIndexOffset();
-            LevelBatchProcess();
+            #ifdef _DEBUG
+            printf("Debug: Count of meshes: 0x%lX\n", mesh_count);
+            #endif    
+            GetLevelTable();
     } else {
             #ifdef _DEBUG
             printf("Debug: Level not detected\n");
@@ -107,7 +92,7 @@ void GetIndexOffset()
             index_offset_pattern_found = 1;
             break;
         }
-        fseek(f_in, -7, SEEK_CUR); //For a more accurate check.
+        fseek(f_in, -7, SEEK_CUR);
         index_offset++;
     }
     
@@ -204,7 +189,7 @@ void GetIndexCount()
             index_cnt_offset_found = 1;
             break;
         }
-        fseek(f_in, -3, SEEK_CUR); //For a more accurate check.
+        fseek(f_in, -3, SEEK_CUR);
         index_cnt_offset++;
     }
     
@@ -242,11 +227,11 @@ void GetVertexOffset()
             vert_offset_found = 1;
             break;
         }
-        fseek(f_in, -7, SEEK_CUR); //For a more accurate check.
+        fseek(f_in, -7, SEEK_CUR);
         vert_offset++;
     }
     
-    vert_offset += 1; //корректировка крч
+    vert_offset += 1;
     
     if (vert_offset_found) {
             #ifdef _DEBUG
@@ -306,12 +291,12 @@ void GetModelType()
             printf("Debug: Ragdoll total zeros: 0x%lX\n", bones_null_count);
             printf("Debug: Ragdoll has been detected\n");
             #endif
-            jamc_ragdoll_convertation();
+            ProcessRagdollMesh();
     } else {
             #ifdef _DEBUG
             printf("Debug: Ragdoll not detected\n");
             #endif
-            jamc_prop_convertation();
+            ProcessPropMesh();
     }
 }
 
@@ -327,21 +312,6 @@ int FinishProcessing()
     printf("Conversion complete.\n"); //Sexy.
     
     return 0;    
-}
-
-//=============================================================================
-// READING ANIMATION
-//=============================================================================
-
-void ReadingAnimation() {
-    for (int i = 0; i < 3; i++) {
-        printf("\rReading");
-        for (int j = 0; j <= i; j++) {
-            printf(".");
-        }
-        Sleep(512);
-    }
-    printf("\rReading...\n");
 }
 
 //=============================================================================
@@ -371,7 +341,5 @@ int main(int argc, char *argv[])
         return 1;
     }
     
-	ReadingAnimation(); //Funne stuff xD.
-    //printf("Reading...\n");
     GetAssetType();
 }
