@@ -6,7 +6,7 @@ Drag model file into exe or make cmd file in the following format: ```jamc.exe y
 Name            | Compiled
 ----------------| ----------------------
 Props           | Yes
-Ragdolls        | Yes
+Characters      | Yes
 Levels MP       | Yes
 Levels Campaign | Yes
 ## Building Code
