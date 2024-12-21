@@ -7,8 +7,8 @@ Name            | Compiled
 ----------------| ----------------------
 Props           | Yes
 Ragdolls        | Yes
-Levels MP       | Yes/But VERY buggy/Half of the maps can be compiled successfully.
-Levels Campaign | Yes/But VERY buggy and VERY unstable.
+Levels MP       | Yes
+Levels Campaign | Yes
 ## Building Code
 To compile the code use: ```Visual Studio .Net 2003``` or ```Dev-C++```
 ## Examples of converted models
