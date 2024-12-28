@@ -48,10 +48,10 @@ void GetAssetType()
     fseek(f_in, 0, SEEK_SET);
     fread(&mesh_count, sizeof(int), 1, f_in);    
     fseek(f_in, 8, SEEK_SET);
-    int mesh_secoundary_count;
-    fread(&mesh_secoundary_count, sizeof(int), 1, f_in);
+    int mesh_count_secondary;
+    fread(&mesh_count_secondary, sizeof(int), 1, f_in);
 
-    if ((mesh_count == mesh_secoundary_count) && (mesh_count < 1024) && (mesh_secoundary_count < 1024)) {
+    if ((mesh_count == mesh_count_secondary) && (mesh_count < 1024) && (mesh_count_secondary < 1024)) {
             #ifdef _DEBUG
             printf("Debug: Level has been detected\n");
             #endif

@@ -130,7 +130,7 @@ void GetLevelTable()
             fseek(f_in, 0x3930, SEEK_SET);
             break;
         default:
-            printf("Warning: Unknown ENV.\n");
+            printf("Warning: Unknown ENV!\n");
             exit(1);
     }    
     LevelBatchProcess();    
@@ -223,12 +223,12 @@ int ProcessLVMesh()
     unsigned short *pi;
     unsigned short v1, v2, v3;
     
-    static int face_subsequence; 
-    static int mesh_number;
+    static int subsequence; 
+    static int numbering;
     
-    fprintf(f_out, "g mesh_%d\n", mesh_number); //Separating geometry.
-    fprintf(f_out, "o mesh_%d\n", mesh_number);
-    mesh_number++;
+    fprintf(f_out, "g mesh_%d\n", numbering); //Separating and numbering each mesh.
+    fprintf(f_out, "o mesh_%d\n", numbering);
+    numbering++;
     
     for(i = 0; i < vert_cnt; i++) {
         verts[i].pos[0] = -verts[i].pos[0]; //Inverting vertices in X axis.
@@ -259,30 +259,49 @@ int ProcessLVMesh()
         v3 = pi[i];
 
 //Skip degenerated faces.
-    if(v1 == v2 || v1 == v3 || v2 == v3)
+    if(v1 == v2 || v2 == v3 || v3 == v1)
        goto next_face;
 
 //Flip every second face.
     if((i - 2) % 2)
         fprintf(f_out, "f %u/%u/%u %u/%u/%u %u/%u/%u\n",
-        v3+voffs+face_subsequence, v3+voffs+face_subsequence, v3+voffs+face_subsequence, 
-        v2+voffs+face_subsequence, v2+voffs+face_subsequence, v2+voffs+face_subsequence, 
-        v1+voffs+face_subsequence, v1+voffs+face_subsequence, v1+voffs+face_subsequence
+        v3+voffs+subsequence, v3+voffs+subsequence, v3+voffs+subsequence, 
+        v2+voffs+subsequence, v2+voffs+subsequence, v2+voffs+subsequence, 
+        v1+voffs+subsequence, v1+voffs+subsequence, v1+voffs+subsequence
         );
     else
         fprintf(f_out, "f %u/%u/%u %u/%u/%u %u/%u/%u\n",
-        v1+voffs+face_subsequence, v1+voffs+face_subsequence, v1+voffs+face_subsequence, 
-        v2+voffs+face_subsequence, v2+voffs+face_subsequence, v2+voffs+face_subsequence, 
-        v3+voffs+face_subsequence, v3+voffs+face_subsequence, v3+voffs+face_subsequence
+        v1+voffs+subsequence, v1+voffs+subsequence, v1+voffs+subsequence, 
+        v2+voffs+subsequence, v2+voffs+subsequence, v2+voffs+subsequence, 
+        v3+voffs+subsequence, v3+voffs+subsequence, v3+voffs+subsequence
         );
 
     next_face:
     v1 = v2;
     v2 = v3;
 }
-    face_subsequence += vert_cnt;
+    subsequence += vert_cnt; //Continue the sequence of triangles after processing each mesh. This is very important for writing to obj.
     free(verts);
     free(indices);
     
     return 0;    
 }    
+
+
+/*
+for (i = 0; i < index_cnt; i += 3) {
+    v1 = indices[i];
+    v2 = indices[i + 1];
+    v3 = indices[i + 2];
+	
+	if (v1 == v2 || v1 == v3 || v2 == v3) {
+        continue;
+    }
+
+    fprintf(f_out, "f %u/%u/%u %u/%u/%u %u/%u/%u\n",
+        v3+voffs+subsequence, v3+voffs+subsequence, v3+voffs+subsequence, 
+        v2+voffs+subsequence, v2+voffs+subsequence, v2+voffs+subsequence, 
+        v1+voffs+subsequence, v1+voffs+subsequence, v1+voffs+subsequence);
+}
+    subsequence += vert_cnt; //Continue the sequence of triangles after processing each mesh. This is very important for writing to obj.
+*/
